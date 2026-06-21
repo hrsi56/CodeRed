@@ -31,7 +31,7 @@ export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, fatalities
     <div className="stats-panel">
       <div className="stat-grid">
         <Stat label="התרעות בטווח" value={totalAlerts} />
-        <Stat label="ממוצע ליום" value={dayCount > 0 ? Math.round(totalAlerts / dayCount) : 0} />
+        <Stat label="ממוצע ליום" text={formatPerDay(totalAlerts, dayCount)} />
         <Stat label="יישובים מותקפים" value={cityWeights.length} />
         <Stat label="אזורים נפגעים" value={distinctZones} />
         <Stat label="הרוגים מדווחים" value={totalFatalities} accent />
@@ -80,10 +80,16 @@ export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, fatalities
   );
 }
 
-function Stat({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
+function formatPerDay(total: number, days: number): string {
+  if (days <= 0) return '0';
+  const v = total / days;
+  return v < 10 && v > 0 ? v.toFixed(1) : numberFmt.format(Math.round(v));
+}
+
+function Stat({ label, value, text, accent }: { label: string; value?: number; text?: string; accent?: boolean }) {
   return (
     <div className={`stat${accent ? ' stat-accent' : ''}`}>
-      <div className="stat-value">{numberFmt.format(value)}</div>
+      <div className="stat-value">{text ?? numberFmt.format(value ?? 0)}</div>
       <div className="stat-label">{label}</div>
     </div>
   );
