@@ -35,7 +35,10 @@ jobs:
       - name: Install ingestion dependencies
         run: pip install -r ingestion/requirements.txt
 
-      - name: Run ingestion (tzevaadom -> SQLite -> JSON exports)
+      - name: Run ingestion (tzevaadom + ACLED -> SQLite -> JSON exports)
+        env:
+          ACLED_EMAIL: ${{ secrets.ACLED_EMAIL }}
+          ACLED_PASSWORD: ${{ secrets.ACLED_PASSWORD }}
         run: python -m ingestion.run
 
       - name: Commit updated data
