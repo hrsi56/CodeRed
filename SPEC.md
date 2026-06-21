@@ -108,8 +108,10 @@ Index `ts_utc`, `zone`, `locality_he`.
 ### 3.2 Fatalities — points (ACLED)
 
 - **Source: ACLED (Armed Conflict Location & Event Data).** Geolocated events with `latitude`, `longitude`, `event_date`, `event_type`, `fatalities`, `location`, `notes`, `source`. Covers **Israel from 2020-present**.
-- **Access:** requires a **free myACLED account / API credentials** — register at `https://acleddata.com/register/`. API docs: `https://acleddata.com/api-documentation/acled-endpoint`. **Store the API key/credentials in an env var (`ACLED_KEY` / `ACLED_EMAIL`), never in the repo.** A Python wrapper exists (`acled` on PyPI) if using FastAPI.
-- **Query:** `country=Israel`, `event_date >= 2023-10-07` and `<= yesterday`, `fatalities > 0` (use `fatalities_where=>`). Request only needed fields: `event_id_cnty|event_date|latitude|longitude|fatalities|event_type|location|notes|source`. Paginate (`limit`/`page`; API default page size is large).
+- **Access — OAuth, NOT a static key.** Register a **free myACLED account** at `https://acleddata.com/register/`. The API authenticates via OAuth: POST `username` (email), `password`, `grant_type=password`, `client_id=acled`, `scope=authenticated` to **`https://acleddata.com/oauth/token`** → returns an `access_token` (valid 24 h) + `refresh_token` (valid 14 d). Send `Authorization: Bearer <access_token>` on every data request.
+  - **Env vars (never commit):** `ACLED_EMAIL`, `ACLED_PASSWORD`. The daily job requests a fresh token at the start of each run (token lifetime 24 h ≫ job duration, so no token persistence is needed). Provide `.env.example`; add `.env` to `.gitignore`. On a host, set these as platform secrets.
+- **Data endpoint:** `GET https://acleddata.com/api/acled/read` with `_format=json` (or `csv`). Base URL: `https://acleddata.com/api/`.
+- **Query:** `country=Israel` (events located in Israel; Gaza events are `country=Palestine` and are deliberately out of scope for this map), `event_date=2023-10-07|<yesterday>` with `event_date_where=BETWEEN`, `fields=event_id_cnty|event_date|latitude|longitude|fatalities|event_type|location|notes|source`. **Filter `fatalities > 0` in code** after fetching (robust; avoids depending on operator syntax) — the server-side `fatalities_where` filter is an optional optimization. Default row cap is 5000; **paginate with `page=1,2,…`** (pagination does not count against rate limits). Israel-country fatality events in this window are modest in number, so a few pages suffice.
 - **Plot:** one marker per event with `fatalities > 0`, at its lat/lng, **radius ∝ √(fatalities)**. Tooltip: date, location, fatalities, event_type, source.
 - **Honesty framing (must surface in UI):** ACLED fatalities are **event-level estimates**, located at an event centroid, compiled from reporting — not a verified named-victim registry. ACLED's Israel/Gaza fatality coding is methodologically contested; present as *reported* figures. **ACLED requires attribution and restricts commercial use** — show attribution and keep the app non-commercial.
 
@@ -227,7 +229,7 @@ Compute per active range (exclude drills by default):
 | alert history (CSV) | `github.com/dleshem/israel-alerts-data` → `israel-alerts.csv` raw | gap-fill / cross-check |
 | alert recent top-up | `https://api.tzevaadom.co.il/alerts-history` | extend to yesterday |
 | city geocoding | `https://www.tzevaadom.co.il/static/cities.json` (confirm path) | Hebrew name → lat/lng/zone |
-| fatalities | ACLED API, `acleddata.com/api-documentation/acled-endpoint` | needs free key; `country=Israel`, `fatalities>0` |
+| fatalities | ACLED `https://acleddata.com/api/acled/read` (OAuth token from `https://acleddata.com/oauth/token`) | free myACLED account; `country=Israel`, filter `fatalities>0`, paginate |
 | news timeline | `https://api.gdeltproject.org/api/v2/doc/doc` | no key; Israel + security query |
 | population | Kontur Israel H3 (HDX) `data.humdata.org/dataset/kontur-population-israel` | CC-BY, vector |
 | outline | simplemaps Israel GeoJSON `simplemaps.com/gis/country/il` | minimal borders |
