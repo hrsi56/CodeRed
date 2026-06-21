@@ -15,4 +15,8 @@ DLESHEM_CSV_URL = (
 ACLED_OAUTH_URL = "https://acleddata.com/oauth/token"
 ACLED_READ_URL = "https://acleddata.com/api/acled/read"
 
+GDELT_DOC_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
+# GDELT throttles to ~1 request / 5 s; pace a little slower to be safe.
+GDELT_MIN_INTERVAL_SECONDS = 6
+
 REQUEST_HEADERS = {"User-Agent": "code-red-atlas-ingestion/1 (+https://github.com/hrsi56/CodeRed)"}

@@ -62,6 +62,16 @@ CREATE TABLE IF NOT EXISTS fatalities (
     notes TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_fatalities_date ON fatalities(event_date);
+
+CREATE TABLE IF NOT EXISTS news (
+    event_date TEXT NOT NULL,
+    title TEXT NOT NULL,
+    url TEXT,
+    domain TEXT,
+    source_country TEXT,
+    PRIMARY KEY (event_date, title)
+);
+CREATE INDEX IF NOT EXISTS idx_news_date ON news(event_date);
 """
 
 

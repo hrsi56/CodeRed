@@ -33,6 +33,7 @@ def export_all(conn: sqlite3.Connection) -> None:
     _export_subarea_daily(conn, through_day_index)
     _export_hour_daily(conn, through_day_index)
     _export_fatalities(conn, data_through_date)
+    export_news(conn, data_through_date)
 
 
 def _export_meta(data_through_date: str | None) -> None:
@@ -106,6 +107,27 @@ def _export_fatalities(conn: sqlite3.Connection, data_through_date: str | None) 
             {"d": d, "lat": lat, "lng": lng, "f": f, "t": t, "loc": loc, "src": src}
             for d, lat, lng, f, t, loc, src in rows
         ],
+    )
+
+
+def export_news(conn: sqlite3.Connection, data_through_date: str | None = None) -> None:
+    # Cap at 3 markers/day at export too (incremental fetches can accumulate more over
+    # time) and never show news past the site's freshness date.
+    through = data_through_date or "9999-12-31"
+    rows = conn.execute(
+        """
+        SELECT event_date, title, url, domain FROM (
+            SELECT event_date, title, url, domain,
+                   ROW_NUMBER() OVER (PARTITION BY event_date ORDER BY title) AS rn
+            FROM news WHERE event_date <= ?
+        ) WHERE rn <= 3
+        ORDER BY event_date
+        """,
+        (through,),
+    ).fetchall()
+    _write_json(
+        "news.json",
+        [{"d": d, "title": t, "url": u, "domain": dom} for d, t, u, dom in rows],
     )
 
 
