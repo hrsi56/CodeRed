@@ -16,9 +16,21 @@ def _yesterday_israel() -> date:
     return (datetime.now(ISRAEL_TZ) - timedelta(days=1)).date()
 
 
+# ACLED's auth endpoint sits behind a CDN that, from datacenter IPs (e.g. GitHub
+# Actions runners), returns 415 unless the request matches the documented curl exactly
+# — explicit form Content-Type, an Accept header, and a non-empty User-Agent. The same
+# call succeeds from a residential IP without these, which is what masked it locally.
+_OAUTH_HEADERS = {
+    **REQUEST_HEADERS,
+    "Content-Type": "application/x-www-form-urlencoded",
+    "Accept": "application/json",
+}
+
+
 def _get_access_token(email: str, password: str) -> str:
     resp = requests.post(
         ACLED_OAUTH_URL,
+        headers=_OAUTH_HEADERS,
         data={
             "username": email,
             "password": password,
@@ -28,13 +40,14 @@ def _get_access_token(email: str, password: str) -> str:
         },
         timeout=30,
     )
-    resp.raise_for_status()
+    if not resp.ok:
+        raise RuntimeError(f"ACLED OAuth failed: {resp.status_code} {resp.text[:300]}")
     return resp.json()["access_token"]
 
 
 def fetch_fatality_rows(email: str, password: str) -> list[dict]:
     token = _get_access_token(email, password)
-    headers = {**REQUEST_HEADERS, "Authorization": f"Bearer {token}"}
+    headers = {**REQUEST_HEADERS, "Accept": "application/json", "Authorization": f"Bearer {token}"}
     through = _yesterday_israel().isoformat()
 
     rows: list[dict] = []
