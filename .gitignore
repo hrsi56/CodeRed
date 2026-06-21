@@ -1,1 +1,10 @@
 .DS_Store
+
+# secrets
+.env
+
+# python (ingestion script)
+__pycache__/
+*.pyc
+.venv/
+venv/
