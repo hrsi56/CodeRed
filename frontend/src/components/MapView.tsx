@@ -1,28 +1,22 @@
 import { useEffect, useMemo } from 'react';
-import { MapContainer, GeoJSON, useMap } from 'react-leaflet';
-import type { PathOptions } from 'leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
 import { HeatLayer } from './HeatLayer';
 import { theme } from '../config/theme';
 import { ISRAEL_BOUNDS, ISRAEL_CENTER } from '../config/constants';
-import type { Outline, PopulationPoints } from '../data/types';
+import type { FatalityEvent } from '../data/types';
 import type { CityWeight } from '../data/aggregate';
 
 interface MapViewProps {
-  outline: Outline;
-  population: PopulationPoints;
   cityWeights: CityWeight[];
-  showPopulation: boolean;
+  fatalities: FatalityEvent[];
   showHeatmap: boolean;
-  heatmapMax?: number;
+  showFatalities: boolean;
+  heatmapMax: number;
 }
 
-const countryStyle: PathOptions = { color: theme.outline, weight: 1.5, fill: false };
-const districtStyle: PathOptions = { color: theme.outline, weight: 0.75, fill: false, dashArray: '2 4' };
-
 // Some embeds briefly give the map container a 0x0 size right at mount (seen in this
-// project's own preview tooling). Leaflet itself recovers fine from that once told the
-// real size, but layers that draw straight to a sized canvas (HeatLayer) need a nudge —
-// this is that nudge.
+// project's own preview tooling). Leaflet recovers fine from that once told the real
+// size, but the canvas-drawing HeatLayer needs a nudge — this is that nudge.
 function MapResizeHandler() {
   const map = useMap();
   useEffect(() => {
@@ -33,10 +27,15 @@ function MapResizeHandler() {
   return null;
 }
 
-// Layer order bottom -> top (SPEC.md §4): beige base -> population -> outline ->
-// alert heatmap. No tile layer at all — just a beige canvas (the spec's preferred,
-// most minimal route over a custom MapLibre style).
-export function MapView({ outline, population, cityWeights, showPopulation, showHeatmap, heatmapMax }: MapViewProps) {
+const formatHebrewDate = (isoDate: string) =>
+  new Date(`${isoDate}T00:00:00Z`).toLocaleDateString('he-IL', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+
+export function MapView({ cityWeights, fatalities, showHeatmap, showFatalities, heatmapMax }: MapViewProps) {
   const heatPoints = useMemo<[number, number, number][]>(
     () => cityWeights.map((c) => [c.lat, c.lng, c.weight]),
     [cityWeights],
@@ -47,34 +46,63 @@ export function MapView({ outline, population, cityWeights, showPopulation, show
       center={ISRAEL_CENTER}
       zoom={8}
       minZoom={7}
-      maxZoom={13}
+      maxZoom={16}
       maxBounds={ISRAEL_BOUNDS}
       maxBoundsViscosity={1}
-      attributionControl={false}
-      style={{ background: theme.land, width: '100%', height: '100%' }}
+      style={{ width: '100%', height: '100%' }}
     >
       <MapResizeHandler />
-      {showPopulation && (
-        <HeatLayer
-          points={population}
-          gradient={theme.population.gradient}
-          radius={28}
-          blur={22}
-          maxZoom={11}
-        />
-      )}
-      <GeoJSON data={outline.districts} style={districtStyle} />
-      <GeoJSON data={outline.country} style={countryStyle} />
+      <TileLayer
+        url={theme.basemap.url}
+        attribution={theme.basemap.attribution}
+        subdomains={theme.basemap.subdomains}
+        maxZoom={theme.basemap.maxZoom}
+      />
+
       {showHeatmap && (
         <HeatLayer
           points={heatPoints}
           gradient={theme.alertHeat.gradient}
-          radius={32}
-          blur={20}
+          radius={22}
+          blur={16}
           max={heatmapMax}
-          maxZoom={11}
+          minOpacity={0.3}
+          maxZoom={12}
         />
       )}
+
+      {showFatalities &&
+        fatalities.map((ev, i) => (
+          <CircleMarker
+            key={`${ev.d}-${ev.loc}-${i}`}
+            center={[ev.lat, ev.lng]}
+            radius={Math.max(4, Math.min(34, Math.sqrt(ev.f) * 2.2))}
+            pathOptions={{
+              color: theme.fatality.stroke,
+              weight: 1,
+              fillColor: theme.fatality.fill,
+              fillOpacity: 0.6,
+            }}
+          >
+            <Popup>
+              <div style={{ direction: 'rtl', textAlign: 'right', minWidth: 180 }}>
+                <strong>{ev.loc}</strong>
+                <br />
+                {formatHebrewDate(ev.d)}
+                <br />
+                הרוגים מדווחים: <strong>{ev.f}</strong>
+                <br />
+                סוג אירוע: {ev.t}
+                {ev.src && (
+                  <>
+                    <br />
+                    <span style={{ fontSize: 11, color: '#666' }}>מקורות: {ev.src}</span>
+                  </>
+                )}
+              </div>
+            </Popup>
+          </CircleMarker>
+        ))}
     </MapContainer>
   );
 }

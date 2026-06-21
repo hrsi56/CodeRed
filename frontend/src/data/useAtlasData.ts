@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { AtlasData, CitiesExport, HourDaily, Meta, Outline, PopulationPoints, SubareaDailyRow } from './types';
+import type { AtlasData, CitiesExport, FatalityEvent, HourDaily, Meta, SubareaDailyRow } from './types';
 
 const dataUrl = (file: string) => `${import.meta.env.BASE_URL}data/${file}`;
 
@@ -31,13 +31,12 @@ export function useAtlasData(): AtlasDataState {
       fetchJson<CitiesExport>('cities.json'),
       fetchJson<SubareaDailyRow[]>('subarea_daily.json'),
       fetchJson<HourDaily>('hour_daily.json'),
-      fetchJson<PopulationPoints>('population.json'),
-      fetchJson<Outline>('outline.json'),
+      fetchJson<FatalityEvent[]>('fatalities.json'),
     ])
-      .then(([meta, cities, subareaDaily, hourDaily, population, outline]) => {
+      .then(([meta, cities, subareaDaily, hourDaily, fatalities]) => {
         if (cancelled) return;
         setState({
-          data: { meta, cities, subareaDaily, hourDaily, population, outline },
+          data: { meta, cities, subareaDaily, hourDaily, fatalities },
           loading: false,
           error: null,
         });

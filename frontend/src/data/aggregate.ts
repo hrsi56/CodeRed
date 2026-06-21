@@ -1,5 +1,5 @@
 import { DATA_START_DATE } from '../config/constants';
-import type { CitiesExport, SubareaDailyRow } from './types';
+import type { CitiesExport, FatalityEvent, HourDaily, SubareaDailyRow } from './types';
 
 const MS_PER_DAY = 86_400_000;
 const dataStart = new Date(`${DATA_START_DATE}T00:00:00Z`);
@@ -53,4 +53,36 @@ export function computeCityWeights(
     weights.push({ id: city.id, he: city.he, lat: city.lat, lng: city.lng, zone: city.zone, weight });
   }
   return weights;
+}
+
+// Total alert-rows per hour-of-day (0..23, Israel TZ) summed across the range.
+export function computeHourHistogram(
+  hourDaily: HourDaily,
+  startDayIndex: number,
+  endDayIndex: number,
+): number[] {
+  const hist = new Array<number>(24).fill(0);
+  const from = Math.max(0, startDayIndex);
+  const to = Math.min(hourDaily.length - 1, endDayIndex);
+  for (let day = from; day <= to; day++) {
+    const row = hourDaily[day];
+    for (let h = 0; h < 24; h++) hist[h] += row[h];
+  }
+  return hist;
+}
+
+export function totalAlertsInRange(
+  hourDaily: HourDaily,
+  startDayIndex: number,
+  endDayIndex: number,
+): number {
+  return computeHourHistogram(hourDaily, startDayIndex, endDayIndex).reduce((a, b) => a + b, 0);
+}
+
+export function filterFatalitiesByDate(
+  fatalities: FatalityEvent[],
+  fromIso: string,
+  toIso: string,
+): FatalityEvent[] {
+  return fatalities.filter((f) => f.d >= fromIso && f.d <= toIso);
 }

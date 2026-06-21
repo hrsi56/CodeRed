@@ -1,14 +1,31 @@
-// Color system from SPEC.md §4 — single source of truth so the map and charts stay consistent.
+// Color system — single source of truth so the map and charts stay consistent.
 export const theme = {
-  land: '#F4EEE2',
-  outline: '#D8CDBA',
-  // Subtle aesthetic context layer (SPEC.md §3.3) — alpha is baked into the gradient
-  // stops themselves so it reads as "low opacity, no sharp edges" under leaflet.heat.
-  population: {
-    gradient: { 0.0: 'transparent', 0.4: 'rgba(231,214,190,0.35)', 1.0: 'rgba(184,154,110,0.55)' },
+  // CARTO Voyager basemap (real tiles). OSM + CARTO attribution is legally required
+  // and rendered by Leaflet's attribution control.
+  basemap: {
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 20,
   },
+
+  // Alert density heatmap — a classic warm YlOrRd kernel-density ramp (single warm
+  // family, per SPEC.md §1's single-hue intent) tuned to read as a real heatmap on a
+  // light basemap rather than a flat smear.
   alertHeat: {
-    gradient: { 0.0: 'transparent', 0.5: '#F2A65A', 1.0: '#D7263D' },
+    gradient: {
+      0.0: 'rgba(255,255,178,0)',
+      0.2: 'rgba(254,217,118,0.65)',
+      0.4: 'rgba(253,141,60,0.78)',
+      0.65: 'rgba(240,59,32,0.88)',
+      1.0: 'rgba(189,0,38,0.95)',
+    },
   },
-  fatality: '#2B0A0A',
+
+  // Fatality points (ACLED conflict events) — dark red, sized by sqrt(fatalities).
+  fatality: {
+    stroke: '#5a0a0a',
+    fill: '#c1121f',
+  },
 } as const;
