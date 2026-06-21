@@ -32,6 +32,7 @@ def export_all(conn: sqlite3.Connection) -> None:
     _export_cities(conn)
     _export_subarea_daily(conn, through_day_index)
     _export_hour_daily(conn, through_day_index)
+    _export_fatalities(conn, data_through_date)
 
 
 def _export_meta(data_through_date: str | None) -> None:
@@ -85,6 +86,27 @@ def _export_hour_daily(conn: sqlite3.Connection, through_day_index: int) -> None
     for day_index, hour, count in rows:
         table[day_index][hour] = count
     _write_json("hour_daily.json", table)
+
+
+def _export_fatalities(conn: sqlite3.Connection, data_through_date: str | None) -> None:
+    # Keep one unified freshness promise for the whole site: never show a fatality
+    # point dated past meta.json's dataThroughDate, even if ACLED happens to have
+    # newer rows than tzevaadom does for alerts.
+    if data_through_date is None:
+        _write_json("fatalities.json", [])
+        return
+    rows = conn.execute(
+        "SELECT event_date, lat, lng, fatalities, event_type, location, source_text "
+        "FROM fatalities WHERE event_date <= ? ORDER BY event_date",
+        (data_through_date,),
+    ).fetchall()
+    _write_json(
+        "fatalities.json",
+        [
+            {"d": d, "lat": lat, "lng": lng, "f": f, "t": t, "loc": loc, "src": src}
+            for d, lat, lng, f, t, loc, src in rows
+        ],
+    )
 
 
 def _write_json(filename: str, payload) -> None:

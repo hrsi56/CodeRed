@@ -46,6 +46,22 @@ CREATE TABLE IF NOT EXISTS unmatched_localities (
     occurrences INTEGER NOT NULL DEFAULT 1,
     first_seen_ts TEXT NOT NULL
 );
+
+-- SPEC.md §3.2's schema names "source_url", but ACLED's actual API has no such
+-- field — only "source" (a publisher attribution string, e.g. "Haaretz") and
+-- "notes" (a free-text description). Storing what's really there.
+CREATE TABLE IF NOT EXISTS fatalities (
+    event_id TEXT PRIMARY KEY,
+    event_date TEXT NOT NULL,
+    lat REAL NOT NULL,
+    lng REAL NOT NULL,
+    fatalities INTEGER NOT NULL,
+    event_type TEXT,
+    location TEXT,
+    source_text TEXT,
+    notes TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_fatalities_date ON fatalities(event_date);
 """
 
 

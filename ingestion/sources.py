@@ -12,4 +12,7 @@ DLESHEM_CSV_URL = (
     "https://raw.githubusercontent.com/dleshem/israel-alerts-data/refs/heads/main/israel-alerts.csv"
 )
 
+ACLED_OAUTH_URL = "https://acleddata.com/oauth/token"
+ACLED_READ_URL = "https://acleddata.com/api/acled/read"
+
 REQUEST_HEADERS = {"User-Agent": "code-red-atlas-ingestion/1 (+https://github.com/hrsi56/CodeRed)"}
