@@ -28,6 +28,7 @@ QUERY = "israel (rocket OR missile OR ceasefire OR iran OR hezbollah OR houthi O
 MAX_RECORDS_PER_MONTH = 75
 MARKERS_PER_DAY = 3
 TRAILING_MONTHS = 2
+MAX_GAP_MONTHS_PER_RUN = 4  # back-fill this many empty historical months each daily run
 
 _norm_re = re.compile(r"[^a-z0-9 ]+")
 
@@ -36,15 +37,28 @@ def _normalize_title(title: str) -> str:
     return _norm_re.sub("", title.lower()).strip()[:60]
 
 
-def _month_starts(full: bool) -> list[date]:
+def _all_month_starts() -> list[date]:
     today = datetime.now(ISRAEL_TZ).date()
-    first = DATA_START_DATE.replace(day=1)
     months: list[date] = []
-    cur = first
+    cur = DATA_START_DATE.replace(day=1)
     while cur <= today:
         months.append(cur)
         cur = (cur + timedelta(days=32)).replace(day=1)
-    return months if full else months[-TRAILING_MONTHS:]
+    return months
+
+
+def _months_to_fetch(conn: sqlite3.Connection, full: bool) -> list[date]:
+    all_months = _all_month_starts()
+    if full:
+        return all_months
+    # Always refresh the most recent months, AND opportunistically back-fill the
+    # oldest months that are still empty in the DB (e.g. ones that GDELT 429'd during
+    # the initial backfill) so middle gaps self-heal over a few daily runs rather than
+    # never — the trailing window alone would never reach them.
+    have = {row[0] for row in conn.execute("SELECT DISTINCT substr(event_date, 1, 7) FROM news")}
+    missing = [m for m in all_months if m.strftime("%Y-%m") not in have]
+    wanted = set(all_months[-TRAILING_MONTHS:]) | set(missing[:MAX_GAP_MONTHS_PER_RUN])
+    return sorted(wanted)
 
 
 def _fetch_month(start: date) -> list[dict]:
@@ -109,7 +123,7 @@ def _to_rows(articles: list[dict]) -> list[dict]:
 
 
 def load_news(conn: sqlite3.Connection, full: bool = False) -> None:
-    months = _month_starts(full)
+    months = _months_to_fetch(conn, full)
     total = 0
     for i, start in enumerate(months):
         if i > 0:
