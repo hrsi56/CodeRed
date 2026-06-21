@@ -1,122 +1,85 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useMemo, useState } from 'react';
+import type { DateRange } from 'react-day-picker';
+import 'leaflet/dist/leaflet.css';
+import { useAtlasData } from './data/useAtlasData';
+import { computeCityWeights, dateToDayIndex } from './data/aggregate';
+import { MapView } from './components/MapView';
+import { DateRangePicker } from './components/DateRangePicker';
+import { FreshnessBanner } from './components/FreshnessBanner';
+import { Disclaimer } from './components/Disclaimer';
 
-function App() {
-  const [count, setCount] = useState(0)
+const DAY_MS = 86_400_000;
+const DEFAULT_WINDOW_DAYS = 7;
+
+export default function App() {
+  const { data, loading, error } = useAtlasData();
+  const [range, setRange] = useState<DateRange>();
+  const [showPopulation, setShowPopulation] = useState(true);
+  const [showHeatmap, setShowHeatmap] = useState(true);
+
+  const minDate = data ? new Date(`${data.meta.dataStartDate}T00:00:00Z`) : null;
+  const maxDate = data?.meta.dataThroughDate ? new Date(`${data.meta.dataThroughDate}T00:00:00Z`) : null;
+  const defaultRange: DateRange | undefined = maxDate
+    ? { from: new Date(maxDate.getTime() - (DEFAULT_WINDOW_DAYS - 1) * DAY_MS), to: maxDate }
+    : undefined;
+  const activeRange = range ?? defaultRange;
+
+  const cityWeights = useMemo(() => {
+    if (!data || !activeRange?.from) return [];
+    const start = dateToDayIndex(activeRange.from);
+    const end = dateToDayIndex(activeRange.to ?? activeRange.from);
+    return computeCityWeights(data.subareaDaily, data.cities, start, end);
+  }, [data, activeRange]);
+
+  if (loading) {
+    return <div className="status-screen">טוען נתונים…</div>;
+  }
+  if (error || !data) {
+    return <div className="status-screen">שגיאה בטעינת הנתונים{error ? `: ${error}` : ''}</div>;
+  }
+  if (!minDate || !maxDate || !activeRange) {
+    return <div className="status-screen">אין עדיין נתונים זמינים — תהליך העדכון היומי עדיין לא רץ בהצלחה.</div>;
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app" dir="rtl">
+      <header className="app-header">
+        <h1>מפת התרעות צבע אדום — היסטוריה</h1>
+        <FreshnessBanner meta={data.meta} />
+      </header>
 
-      <div className="ticks"></div>
+      <div className="app-body">
+        <aside className="sidebar">
+          <DateRangePicker range={activeRange} onRangeChange={setRange} minDate={minDate} maxDate={maxDate} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          <div className="layer-toggles">
+            <label>
+              <input
+                type="checkbox"
+                checked={showPopulation}
+                onChange={(e) => setShowPopulation(e.target.checked)}
+              />
+              שכבת אוכלוסין
+            </label>
+            <label>
+              <input type="checkbox" checked={showHeatmap} onChange={(e) => setShowHeatmap(e.target.checked)} />
+              מפת חום של התרעות
+            </label>
+          </div>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+          <Disclaimer />
+        </aside>
+
+        <main className="map-pane">
+          <MapView
+            outline={data.outline}
+            population={data.population}
+            cityWeights={cityWeights}
+            showPopulation={showPopulation}
+            showHeatmap={showHeatmap}
+          />
+        </main>
+      </div>
+    </div>
+  );
 }
-
-export default App
