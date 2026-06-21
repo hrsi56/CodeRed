@@ -16,7 +16,7 @@ A minimal, historical (not real-time) interactive map of Israel showing "Code Re
 2. **Verify unofficial endpoints before depending on them.** Everything marked **VERIFY LIVE** in `SPEC.md` (tzevaadom paths, the cities JSON URL, the dleshem raw path) must be confirmed live (curl / fetch) before you build on it. Put *all* external URLs in one config module (`src/config/sources.*`) so they're trivial to fix when they change.
 3. **Don't re-litigate the locked product decisions** in `SPEC.md` §1 (single-color intensity heatmap, fatalities as points, minimal beige map, timeline from 2023-10-07 through *yesterday only*, split-screen comparison). If you think one is wrong, raise it with the user — don't silently change it.
 4. **No real-time.** Data is current only through the **end of yesterday (Asia/Jerusalem)**. No websockets, no live polling of the current day. The "data excludes today" notice is required, not optional.
-5. **Secrets live in env vars, never in git.** ACLED uses OAuth (email + password → bearer token), not a static key: store `ACLED_EMAIL` / `ACLED_PASSWORD`. Provide a `.env.example`; add `.env` to `.gitignore`. Never print secrets in logs.
+5. **Secrets live in env vars, never in git.** ACLED uses OAuth (email + password → bearer token), not a static key: store `ACLED_EMAIL` / `ACLED_PASSWORD`. In CI they are **GitHub repo secrets** (Settings → Secrets → Actions); locally a `.env` (which is git-ignored). Provide `.env.example`. Never print secrets in logs.
 6. **Ask before spending money or adding heavy deps.** No paid services, no paid API tiers, no large/native dependencies without asking the user first. Default to the free stack in `SPEC.md`.
 7. **Keep the ethical framing.** This is unofficial and informational/historical. The disclaimer, attribution block, "fatalities are *reported* estimates," and "coordinates are centroids" notes (SPEC §9) must be present in the UI. No targeting/operational framing.
 
@@ -24,10 +24,13 @@ A minimal, historical (not real-time) interactive map of Israel showing "Code Re
 
 ## Tech stack (don't drift)
 
-- Frontend: **React + Vite**, **react-leaflet + Leaflet.heat**, **Recharts**, **react-day-picker**. Hebrew, **RTL**.
-- Backend: **Node/Express** *or* **Python/FastAPI** (pick one, stay consistent). **SQLite** to start.
-- Data refresh: one **daily batch job**, not a live server loop.
-- All date math in **Asia/Jerusalem**; mind DST.
+- **Hosting: GitHub Pages — fully static. No server, no REST API, no runtime DB.** The browser only fetches the app's own `/data/*.json`.
+- **Datastore: SQLite only** (no Postgres). It's a *build-time* store, owned by the daily job; the frontend never queries it directly — it reads static JSON exported from it (see `SPEC.md` §3.5).
+- **Updates: one daily GitHub Actions workflow** (`.github/workflows/daily.yml`, `schedule` cron + `workflow_dispatch`) ingests → SQLite → exports JSON → `vite build` → deploys to Pages. Not a live server loop.
+- **Ingestion/export script:** Python *or* Node (pick one), runs only in Actions.
+- **Frontend: React + Vite + TypeScript**, **react-leaflet + Leaflet.heat**, **Recharts**, **react-day-picker**. Hebrew, **RTL**. Set Vite `base:'/<repo>/'`. All filtering/aggregation/stats are **client-side** from the JSON.
+- **City aggregation: coarse union, MAX rule** (SPEC §3.1) — city value over a range = max of its sub-areas, not sum.
+- All date math in **Asia/Jerusalem**; the job recomputes "yesterday" itself (cron is UTC and may be delayed); mind DST.
 
 If you want to deviate from the stack, ask first and say why.
 
@@ -38,7 +41,7 @@ If you want to deviate from the stack, ask first and say why.
 - **Follow the staged build plan in `SPEC.md` §11.** Finish and self-verify each stage (against its "Done when" check) before starting the next. Keep each stage shippable.
 - **Commit in small, logical units** with clear messages (e.g. `feat(map): single-hue alert heatmap`). One concern per commit.
 - **Centralize config:** external URLs in one module; the color palette (SPEC §4) in one theme file; the `2023-10-07` start date and TZ in one constants file.
-- **Write a real `README.md`** as you go: how to install, set env vars, run the daily job, run dev, and build.
+- **Write a real `README.md`** as you go: how to install, set repo secrets / local `.env`, run the ingestion+export script locally, run dev (`vite`), build, and how the daily Action deploys to Pages.
 - **Prefer clarity over cleverness.** This is a hobby project meant to be readable and maintainable.
 
 ## When you're blocked

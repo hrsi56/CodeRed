@@ -19,48 +19,61 @@ These were decided by the product owner. Implement them as written.
 3. **Map aesthetic = minimal & monochromatic-warm.** The base map must be **as uniform as possible in a very light beige / light-brown tone**. **Population concentrations** appear **on the same map as a slightly darker brown**. No busy street tiles, no labels clutter, no satellite. Think "quiet beige canvas."
 4. **Timeline starts 2023-10-07.** No data or UI before that date. The timeline/end bound is **the end of yesterday** (Israel local time) at any given moment. **The current day is never included.** A persistent, visible notice must state that the data does not include today. (This deliberately removes the need for real-time polling and saves load.)
 5. **Comparison = split screen.** An "Add Comparison" button splits the view into two independent panels (A and B), each with its own date range, map, and statistics. Both ranges are independently adjustable.
+6. **Hosting = GitHub Pages, fully static.** No server, no REST API, no runtime database. See §2.
+7. **Datastore = SQLite only** (no Postgres). It is a build-time store inside the daily job; the frontend reads static JSON exported from it. See §2 and §3.5.
+8. **Updates = a daily GitHub Actions workflow** (cron), which ingests, exports JSON, and deploys to Pages. See §2.
+9. **City aggregation = coarse union with the MAX rule.** Sub-areas collapse to a base city; a city's value over a range is the **max** among its sub-areas, not the sum. See §3.1.
 
 ---
 
-## 2. Architecture (simplified: batch, not real-time)
+## 2. Architecture — STATIC SITE on GitHub Pages, SQLite-only, updated by GitHub Actions
 
-Because the data only ever needs to be current through *yesterday*, **there is no websocket / SSE / live poller and no need for an Israeli-IP server.** All chosen sources (tzevaadom, ACLED, GDELT, Kontur/WorldPop) are reachable from anywhere, so the whole thing can run on **free hosting**.
+**This is locked.** There is **no server, no REST API, and no runtime database.** The site served to users is **100% static and hosted on GitHub Pages.** A **scheduled GitHub Actions workflow** runs once a day: it ingests the sources into a **SQLite** database (the single canonical datastore — **no Postgres**), **exports compact pre-aggregated JSON**, builds the frontend, and deploys to Pages. The browser only ever fetches the app's own static JSON from the Pages origin — so **the browser never calls tzevaadom / ACLED / GDELT directly, which eliminates all CORS and geo-block issues** (the CI runner does that fetching server-side).
 
 ```
-                ┌─────────────────────────────────────────────┐
-                │   DAILY BATCH JOB (cron / scheduled fn)      │
-                │   runs ~03:00 Asia/Jerusalem                 │
-                │   computes "yesterday" boundary in IL TZ     │
-                │   1. fetch alert history  → upsert           │
-                │   2. fetch ACLED fatalities (Israel) → upsert│
-                │   3. fetch GDELT news events → upsert        │
-                └───────────────────────┬─────────────────────┘
-                                        ▼
-                          ┌───────────────────────────┐
-                          │  DB (SQLite → Postgres)   │
-                          │  alerts / fatalities /    │
-                          │  news  (+ static pop,     │
-                          │  cities geo assets)       │
-                          └─────────────┬─────────────┘
-                                        ▼
-                 REST API (Node/Express OR Python/FastAPI)
-                 GET /api/alerts?from=&to=
-                 GET /api/fatalities?from=&to=
-                 GET /api/stats?from=&to=
-                 GET /api/news?from=&to=
-                 GET /api/meta            → {dataThroughDate, lastUpdated}
-                                        ▼
-                          React + Vite frontend (Hebrew, RTL)
-                          Leaflet map · Recharts · timeline · split-screen
+   GitHub Actions  (scheduled cron, ~daily)  ── runs on GitHub's runners (US IPs; fine for all sources)
+   ┌──────────────────────────────────────────────────────────────┐
+   │ 1. compute "yesterday" boundary in Asia/Jerusalem            │
+   │ 2. ingest → SQLite (data/atlas.sqlite) — the ONLY datastore: │
+   │      • alert history (tzevaadom historical + dleshem + topup) │
+   │      • ACLED fatalities (country=Israel) — creds from secrets │
+   │      • GDELT news events                                      │
+   │      • geocode + coarse city-union (see §3.1)                 │
+   │ 3. EXPORT compact static JSON  →  frontend/public/data/*.json │
+   │ 4. vite build  →  static site                                │
+   │ 5. deploy to GitHub Pages (actions/deploy-pages)             │
+   └──────────────────────────────┬───────────────────────────────┘
+                                  ▼
+                 GitHub Pages (static files only)
+                 /data/subarea_daily.json   (day × sub-area counts)
+                 /data/hour_daily.json       (day × hour counts)
+                 /data/event_times.json      (distinct alert event times)
+                 /data/fatalities.json
+                 /data/news.json
+                 /data/cities.json           (geo + sub-area→city map)
+                 /data/population.json        (Kontur hexes, simplified)
+                 /data/meta.json              ({dataThroughDate, generatedAt})
+                                  ▼
+        React + Vite SPA (Hebrew, RTL)  — fetches the JSON above, then does
+        ALL date-range filtering, aggregation & stats CLIENT-SIDE.
+        Leaflet map · Recharts · timeline · split-screen comparison
 ```
 
-**Stack (recommended):**
-- **Backend:** Node.js + Express **or** Python + FastAPI. Pick one; both are fine. The daily job can be a separate script invoked by the host's scheduler (Railway/Render cron, Fly machines scheduled, or GitHub Actions on a schedule writing to the DB/storage).
-- **Database:** **SQLite** to start (single file, trivial). Migrate to **Postgres** only if you deploy somewhere with an ephemeral filesystem. One row per (alert_id, locality) and per fatality event.
-- **Frontend:** **React + Vite**, **react-leaflet**, **Leaflet.heat**, **Leaflet.markercluster** (optional), **Recharts**, **react-day-picker**.
-- **Hosting (all free tiers):** backend on Railway / Render / Fly.io; frontend on Vercel / Netlify / Cloudflare Pages.
+**Stack (locked):**
+- **Datastore: SQLite only.** Lives at `data/atlas.sqlite`, built/updated by the Actions job. No Postgres, no other DB. It is a **build-time** store; it is *not* queried at runtime by the browser.
+- **Frontend: React + Vite + TypeScript**, **react-leaflet**, **Leaflet.heat**, **Recharts**, **react-day-picker**. Fully static output.
+- **Ingestion/export script:** Python *or* Node (pick one) — runs only inside GitHub Actions. It owns SQLite and writes the JSON exports.
+- **Hosting: GitHub Pages** (project site). Set Vite `base: '/<repo-name>/'` so asset paths resolve. Deploy via the official Pages Actions (`actions/configure-pages`, `actions/upload-pages-artifact`, `actions/deploy-pages`).
 
-**Lighter alternative (consider, optional):** since the dataset is bounded and changes once a day, the daily job can **pre-compute static JSON** (e.g., per-day aggregates + a fatalities file + a news file) and the frontend can do range filtering/aggregation client-side. This removes the live backend entirely (host static files on object storage / Pages). Use this if you want zero running servers. Default to the small-backend approach for cleaner stats queries unless the user prefers static.
+**Why static JSON instead of querying SQLite in the browser:** the dataset is bounded and read-only, and the required views aggregate cleanly to small daily buckets, so shipping a few compact JSON files is simpler and faster than running a DB in the browser. *(Optional alternative, only if you prefer real SQL in the browser: ship the `.sqlite` to Pages and query it client-side with `sql.js-httpvfs` over HTTP range requests. Not the default — adds WASM complexity. SQLite remains the only datastore either way.)*
+
+**The daily GitHub Actions workflow (`.github/workflows/daily.yml`):**
+- **Trigger:** `schedule: cron` once a day **plus** `workflow_dispatch` (manual). Use a UTC time that lands a few hours after Israel midnight so "yesterday (Israel)" is fully complete and sources have caught up — e.g. `cron: "0 2 * * *"` (02:00 UTC ≈ 04:00–05:00 Israel). Note GitHub cron runs in **UTC** and may be delayed under load; the job must recompute "yesterday" itself, never assume the trigger time.
+- **Secrets:** `ACLED_EMAIL`, `ACLED_PASSWORD` come from **GitHub repo secrets** (Settings → Secrets and variables → Actions), injected as env. They are **never** committed. A local `.env` is only for running the script on your own machine.
+- **Persistence of SQLite across runs:** either (a) commit `data/atlas.sqlite` back to the repo at the end of each run (simple history; uses an incremental upsert so each day only adds the newest rows), or (b) cache it with `actions/cache`. Prefer (a) for a hobby project — it's debuggable and the file stays small. Incremental: only fetch/append alerts newer than the max timestamp already stored, then re-export.
+- **Output:** the built static site (with `public/data/*.json`) deployed to Pages.
+
+**Client-side data sizes:** integer-heavy JSON gzips extremely well and Pages serves compressed. Keep exports as packed arrays (not arrays of verbose objects) — see §3.5.
 
 ---
 
@@ -85,6 +98,11 @@ Because the data only ever needs to be current through *yesterday*, **there is n
   ```
 - Fallback geocoders: `eladnava/redalert-android` (≈1,500 localities w/ coords + polygons), `idodov/RedAlert` `cities_name.md`.
 - **Matching caveat:** Oref/tzevaadom names are exact & sub-divided (e.g. `תל אביב - מרכז העיר`, `אשדוד - א,ב,ד,ה`). Build a normalization layer keyed on the Hebrew `name`; use exact match first, then fuzzy/substring fallback. Log unmatched names to an `unmatched_localities` table so coverage can be improved.
+
+**Coarse city-union with the MAX rule (locked design decision).** We do **not** need sub-area precision. Each alert sub-area is collapsed to a **base city**, and the heatmap intensity for a base city over a selected range is the **MAXIMUM count among its sub-areas — not the sum.**
+- *Example:* in the selected range, "באר שבע - מערב" had 6 alerts and "באר שבע - מזרח" had 3 → the value for **באר שבע** is **6**.
+- **Deriving the base city:** strip the qualifier after the separator. Sub-area names are typically `"<city> - <part>"`; take the text before `" - "` (the hyphen-with-spaces separator) and trim. Maintain a small **manual override map** for irregular cases (kibbutzim, regional councils, names without a separator) so each sub-area reliably maps to one `city_id`. Store the mapping `sub_area → {city_id, city_name_he, lat, lng, zone}` in `cities.json`; the base city's coordinates = a representative/centroid point (pick the largest sub-area's coords or the official city centroid).
+- **Where MAX is applied:** the export keeps **per-(day, sub-area) counts** (`subarea_daily`). The **frontend**, for the active date range, sums each sub-area's counts across the range, groups sub-areas by `city_id`, and takes the **max** per city → that is the heatmap weight and the "top cities" value. Keeping sub-area granularity in the export (not pre-collapsing) is what makes the MAX-over-range correct for *any* range the user picks.
 
 **`alerts` table schema:**
 
@@ -138,6 +156,23 @@ Bake population into a **static asset** processed once (not queried per request)
 
 **`news` table:** `event_date, title, url, domain, source_country, score/tone`.
 
+### 3.5 Static JSON exports (what the daily job writes for the static frontend)
+
+The Actions job queries SQLite and writes these to `frontend/public/data/`. Use **packed arrays / index maps**, not arrays of verbose objects, so they gzip small. `dayIndex` is days since `2023-10-07` (day 0). All counts exclude drills.
+
+| file | shape | drives |
+|---|---|---|
+| `meta.json` | `{dataStartDate:"2023-10-07", dataThroughDate:"YYYY-MM-DD", generatedAt:ISO}` | freshness banner, timeline bounds |
+| `cities.json` | `{ subAreas: { "<he name>": {ci:<cityId>} }, cities: [ {id, he, lat, lng, zone} ] }` | geocoding + sub-area→city union map |
+| `subarea_daily.json` | packed rows `[dayIndex, subAreaId, count]` (or `{cols, rows}`) | **map heatmap** & top-cities (client applies MAX-per-city over the range) |
+| `hour_daily.json` | `[dayIndex][0..23]` counts of distinct alert events per hour (Israel TZ) | **hour-of-day histogram** (sum over range) |
+| `event_times.json` | sorted distinct alert-event unix minutes, **delta-encoded** | inter-alert gap stats (optional; can defer) |
+| `fatalities.json` | `[ {d:"YYYY-MM-DD", lat, lng, f:<count>, t:<type>, loc} ]` | fatality points |
+| `news.json` | `[ {d:"YYYY-MM-DD", title, url, domain} ]` (deduped, capped/day) | timeline markers |
+| `population.json` | simplified Kontur hexes as GeoJSON or `[lat,lng,weight]` | population shading |
+
+The frontend loads these once on startup (show a small loading state), then **all date-range filtering, the MAX-per-city union, and every statistic are computed in the browser** from these arrays. No network calls except fetching these files from the same Pages origin.
+
 ---
 
 ## 4. Map & visualization spec
@@ -162,7 +197,7 @@ Bake population into a **static asset** processed once (not queried per request)
 
 **Layer order (bottom → top):** beige base → population choropleth → region outline → **alert heatmap** → **fatality points**.
 
-**Heatmap details:** aggregate alerts in the selected range to **one weighted point per locality** (`[lat, lng, count]`); feed to `L.heatLayer` with a fixed `max`/`radius`/`gradient`. Keep the gradient a single hue family so it stays "one color + intensity." Recompute on range change.
+**Heatmap details:** for the selected range, compute per **base city** a weight = **MAX of its sub-areas' alert counts over the range** (see §3.1 union rule), then feed `[city.lat, city.lng, weight]` to `L.heatLayer` with a fixed `max`/`radius`/`gradient`. One weighted point per base city. Keep the gradient a single hue family so it stays "one color + intensity." All of this is computed client-side from `subarea_daily.json` + `cities.json`; recompute on range change.
 
 **Layer toggles:** allow toggling population, heatmap, and fatality points independently. Default: all on.
 
@@ -173,7 +208,7 @@ Bake population into a **static asset** processed once (not queried per request)
 - **Linear timeline** spanning **2023-10-07 → yesterday (Israel TZ)**. Horizontal, scrubbable.
 - **News markers** (from GDELT) sit on the timeline; **clicking one sets the active range** (provide presets like "day of", "week after", "±3 days"). This directly enables the owner's example ("the week after the Iran agreement").
 - **Range picker:** `react-day-picker` (range mode). **Max selectable date = yesterday**; disable today and future.
-- **Persistent data-freshness notice (required):** a visible banner/chip, e.g. (Hebrew) "הנתונים מעודכנים עד סוף יום אתמול ({yesterday date}). היום הנוכחי אינו כלול." Drive the date from `GET /api/meta.dataThroughDate`.
+- **Persistent data-freshness notice (required):** a visible banner/chip, e.g. (Hebrew) "הנתונים מעודכנים עד סוף יום אתמול ({yesterday date}). היום הנוכחי אינו כלול." Drive the date from `meta.json.dataThroughDate` (loaded from `/data/meta.json`). Also set the timeline's max bound from the same value.
 
 ---
 
@@ -223,6 +258,8 @@ Compute per active range (exclude drills by default):
 
 ## 10. Endpoints quick-reference (all **VERIFY LIVE** before depending)
 
+**These are fetched only by the GitHub Actions ingestion job (server-side), never by the browser.** The browser only fetches `/data/*.json` from the Pages origin. Centralize these URLs in one config module in the ingestion script.
+
 | purpose | endpoint / source | notes |
 |---|---|---|
 | alert history (bulk) | `https://www.tzevaadom.co.il/static/historical/all.json` | filter ≥ 2023-10-07 |
@@ -238,22 +275,25 @@ Compute per active range (exclude drills by default):
 
 ## 11. Build stages (with acceptance checks)
 
-**Stage 1 — Data pipeline.** Daily job ingests tzevaadom historical (≥2023-10-07) + dleshem into SQLite; builds the Hebrew geocoder; computes `dataThroughDate` = yesterday (IL TZ).
-*Done when:* `GET /api/alerts?from=&to=` returns geocoded alerts for any range in scope, and `/api/meta` reports yesterday correctly.
+**Stage 0 — Repo & Pages skeleton.** Vite + React + TS scaffold with `base:'/<repo>/'`; a placeholder `/data/meta.json`; the `.github/workflows/daily.yml` workflow (with `schedule` + `workflow_dispatch`) wired to build and deploy to GitHub Pages; `.env.example`; `.gitignore` (incl. `.env`). Add `ACLED_EMAIL`/`ACLED_PASSWORD` as repo secrets.
+*Done when:* the empty app deploys to Pages automatically and the workflow runs green on manual dispatch.
 
-**Stage 2 — Map MVP.** React + react-leaflet; beige minimal base + region outline + population choropleth; single-hue alert heatmap for a selected range; range picker capped at yesterday; freshness banner.
-*Done when:* a single panel renders the correct heatmap for a chosen range, looks minimal/beige, and shows the "excludes today" notice.
+**Stage 1 — Ingestion → SQLite → JSON exports.** The ingestion script (run inside the Action) builds `data/atlas.sqlite` from tzevaadom historical (≥2023-10-07) + dleshem + top-up; builds the Hebrew geocoder + sub-area→city union map; computes `dataThroughDate` = yesterday (Israel TZ); writes all `public/data/*.json` per §3.5.
+*Done when:* running the job produces valid, non-empty `subarea_daily.json`, `cities.json`, `hour_daily.json`, and `meta.json`, and re-running is incremental (only appends new days).
 
-**Stage 3 — Fatalities + stats.** ACLED ingestion → fatality points (sized by count) with tooltips; Recharts hour-of-day histogram + top localities + fatalities total.
+**Stage 2 — Map MVP (client-side).** App loads `/data/*.json`; beige minimal base + region outline + population choropleth; single-hue alert heatmap for a selected range using the **MAX-per-city** union; `react-day-picker` capped at yesterday; freshness banner from `meta.json`.
+*Done when:* a single panel renders the correct heatmap for a chosen range entirely client-side, looks minimal/beige, and shows the "excludes today" notice.
+
+**Stage 3 — Fatalities + stats.** ACLED ingestion → `fatalities.json` → fatality points (sized by count) with tooltips; Recharts hour-of-day histogram (from `hour_daily.json`) + top cities + fatalities total, all computed client-side for the active range.
 *Done when:* points and stats match the selected range and update on range change.
 
-**Stage 4 — Timeline + news.** GDELT ingestion → clickable timeline markers with presets that set the range.
+**Stage 4 — Timeline + news.** GDELT ingestion → `news.json` → clickable timeline markers with presets that set the range.
 *Done when:* news markers populate automatically and clicking sets the range (the "week after event X" flow works).
 
-**Stage 5 — Comparison.** Refactor panel into a component; "Add Comparison" mounts panel B; shared/locked scales; delta strip.
+**Stage 5 — Comparison.** Refactor panel into a component; "Add Comparison" mounts panel B; shared/locked scales; delta strip. All client-side.
 *Done when:* two independent ranges render side-by-side with honest shared scales and delta metrics.
 
-**Stage 6 — Polish.** Hebrew/RTL pass, disclaimers/attribution, layer toggles, responsive stacking, performance (simplify population hexagons, debounce range changes).
+**Stage 6 — Polish.** Hebrew/RTL pass, disclaimers/attribution, layer toggles, responsive stacking, performance (simplify population hexagons, packed arrays, debounce range changes).
 
 ---
 
