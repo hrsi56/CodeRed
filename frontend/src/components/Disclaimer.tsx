@@ -14,8 +14,15 @@ export function Disclaimer() {
       </p>
       <p>
         מקורות ותודות: Tzofar/tzevaadom (התרעות), ACLED (הרוגים — שימוש לא מסחרי וחובת
-        קרדיט), GDELT (חדשות), Kontur (אוכלוסין, CC-BY) ו-geoBoundaries (קווי מתאר,
-        Public Domain), dleshem/israel-alerts-data (אימות צולב).
+        קרדיט), GDELT (חדשות), מפת הרקע ©{' '}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
+          OpenStreetMap
+        </a>{' '}
+        ו-
+        <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">
+          CARTO
+        </a>
+        . חדשות מ-GDELT עשויות לכלול כותרות באנגלית ממקורות שונים.
       </p>
     </details>
   );

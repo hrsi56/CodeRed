@@ -33,10 +33,18 @@ export interface FatalityEvent {
   src: string | null;
 }
 
+export interface NewsEvent {
+  d: string;
+  title: string;
+  url: string | null;
+  domain: string | null;
+}
+
 export interface AtlasData {
   meta: Meta;
   cities: CitiesExport;
   subareaDaily: SubareaDailyRow[];
   hourDaily: HourDaily;
   fatalities: FatalityEvent[];
+  news: NewsEvent[];
 }

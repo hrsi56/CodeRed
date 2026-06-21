@@ -8,11 +8,12 @@ interface StatsPanelProps {
   totalAlerts: number;
   cityWeights: CityWeight[];
   fatalities: FatalityEvent[];
+  dayCount: number;
 }
 
 const numberFmt = new Intl.NumberFormat('he-IL');
 
-export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, fatalities }: StatsPanelProps) {
+export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, fatalities, dayCount }: StatsPanelProps) {
   const topCities = useMemo(
     () => [...cityWeights].sort((a, b) => b.weight - a.weight).slice(0, 10),
     [cityWeights],
@@ -30,6 +31,7 @@ export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, fatalities
     <div className="stats-panel">
       <div className="stat-grid">
         <Stat label="התרעות בטווח" value={totalAlerts} />
+        <Stat label="ממוצע ליום" value={dayCount > 0 ? Math.round(totalAlerts / dayCount) : 0} />
         <Stat label="יישובים מותקפים" value={cityWeights.length} />
         <Stat label="אזורים נפגעים" value={distinctZones} />
         <Stat label="הרוגים מדווחים" value={totalFatalities} accent />
