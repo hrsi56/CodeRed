@@ -10,16 +10,28 @@ export const theme = {
     maxZoom: 20,
   },
 
-  // Alert density heatmap — a classic warm YlOrRd kernel-density ramp (single warm
-  // family, per SPEC.md §1's single-hue intent) tuned to read as a real heatmap on a
-  // light basemap rather than a flat smear.
+  // Alert density heatmap — one constant red (matches --accent, the app's "alert"
+  // colour elsewhere) with intensity carried *only* by opacity, per the user's
+  // explicit choice over SPEC.md §4's example multi-stop warm ramp. minOpacity/
+  // maxOpacity/gamma below are what vary; the colour itself never shifts hue.
   alertHeat: {
     gradient: {
-      0.0: 'rgba(255,255,178,0)',
-      0.2: 'rgba(254,217,118,0.65)',
-      0.4: 'rgba(253,141,60,0.78)',
-      0.65: 'rgba(240,59,32,0.88)',
-      1.0: 'rgba(189,0,38,0.95)',
+      0.0: 'rgba(215,38,61,1)',
+      1.0: 'rgba(215,38,61,1)',
     },
+    radius: 16,
+    blur: 10,
+    // Every locality with at least one alert must read as clearly present, so the
+    // floor is non-zero; the ceiling caps how dark the single hottest locality gets.
+    // Lowered from 0.45 — at a constant hue (no colour to separate weak from strong),
+    // a 0.45 floor meant almost everywhere with *any* alerts looked nearly as solid
+    // as the real hot spots, washing out the map into one red mass.
+    minOpacity: 0.25,
+    maxOpacity: 0.92,
+    // weight/max is raised to this power before mapping to color/opacity — gamma<1
+    // pulls low counts up sharply (so one alert is plainly visible) while compressing
+    // the rest of the range, so more alerts read as only "a little" darker, not a
+    // jump from invisible to blazing red.
+    gamma: 0.35,
   },
 } as const;

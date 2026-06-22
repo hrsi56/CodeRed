@@ -82,7 +82,7 @@ export function MapView({ cityWeights, showHeatmap, heatmapMax }: MapViewProps) 
     <MapContainer
       center={ISRAEL_CENTER}
       zoom={8}
-      minZoom={7}
+      minZoom={5}
       maxZoom={16}
       maxBounds={ISRAEL_BOUNDS}
       maxBoundsViscosity={1}
@@ -100,10 +100,12 @@ export function MapView({ cityWeights, showHeatmap, heatmapMax }: MapViewProps) 
         <HeatLayer
           points={heatPoints}
           gradient={theme.alertHeat.gradient}
-          radius={22}
-          blur={16}
+          radius={theme.alertHeat.radius}
+          blur={theme.alertHeat.blur}
           max={heatmapMax}
-          minOpacity={0.3}
+          minOpacity={theme.alertHeat.minOpacity}
+          maxOpacity={theme.alertHeat.maxOpacity}
+          gamma={theme.alertHeat.gamma}
           maxZoom={12}
         />
       )}

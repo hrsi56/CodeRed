@@ -12,6 +12,10 @@ interface TimelineProps {
   news: NewsEvent[];
   range: DateRange;
   onPickRange: (range: DateRange) => void;
+  /** Which day's "what happened" popover is open — shared with the calendar so
+   *  clicking a date there opens the same popover as clicking a timeline point. */
+  openDay: string | null;
+  onOpenDayChange: (day: string | null) => void;
 }
 
 const DAY_MS = 86_400_000;
@@ -25,10 +29,9 @@ const dayFloor = (ms: number) => dayUTC(toIso(ms)).getTime();
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 const addDays = (d: Date, days: number) => new Date(d.getTime() + days * DAY_MS);
 
-export function Timeline({ minDate, maxDate, news, range, onPickRange }: TimelineProps) {
+export function Timeline({ minDate, maxDate, news, range, onPickRange, openDay, onOpenDayChange }: TimelineProps) {
   const { lang, t } = useLanguage();
   const locale = localeOf(lang);
-  const [openDay, setOpenDay] = useState<string | null>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const minimapRef = useRef<HTMLDivElement>(null);
 
@@ -208,22 +211,6 @@ export function Timeline({ minDate, maxDate, news, range, onPickRange }: Timelin
     }
   };
 
-  const pick = (dayIso: string, mode: 'day' | 'week' | 'around') => {
-    const d = dayUTC(dayIso);
-    let from = d;
-    let to = d;
-    if (mode === 'week') to = addDays(d, 6);
-    if (mode === 'around') {
-      from = addDays(d, -3);
-      to = addDays(d, 3);
-    }
-    onPickRange({
-      from: new Date(clamp(from.getTime(), minDateMs, maxDateMs)),
-      to: new Date(clamp(to.getTime(), minDateMs, maxDateMs)),
-    });
-    setOpenDay(null);
-  };
-
   // Stop a press on a marker from also starting a track drag-select (and from the
   // pointer-capture that would otherwise swallow the marker's own click).
   const stopMarkerPointer = (e: ReactPointerEvent<HTMLButtonElement>) => e.stopPropagation();
@@ -236,9 +223,6 @@ export function Timeline({ minDate, maxDate, news, range, onPickRange }: Timelin
         return { left: `${Math.min(a, b)}%`, width: `${Math.max(0.6, Math.abs(b - a))}%` };
       })()
     : null;
-
-  const openEvents = openDay ? byDay.get(openDay) ?? [] : [];
-  const openKeyEvent = openDay ? keyEventByDay.get(openDay) : undefined;
 
   return (
     <div className="timeline">
@@ -295,7 +279,7 @@ export function Timeline({ minDate, maxDate, news, range, onPickRange }: Timelin
               style={{ left: `${left}%` }}
               title={iso}
               onPointerDown={stopMarkerPointer}
-              onClick={() => setOpenDay(openDay === iso ? null : iso)}
+              onClick={() => onOpenDayChange(openDay === iso ? null : iso)}
               aria-label={iso}
             />
           );
@@ -313,57 +297,13 @@ export function Timeline({ minDate, maxDate, news, range, onPickRange }: Timelin
               className={`timeline-key-event${openDay === iso ? ' open' : ''}`}
               style={{ left: `${left}%` }}
               onPointerDown={stopMarkerPointer}
-              onClick={() => setOpenDay(openDay === iso ? null : iso)}
+              onClick={() => onOpenDayChange(openDay === iso ? null : iso)}
             >
               <span className="timeline-key-event-label">{lang === 'he' ? ev.he : ev.en}</span>
             </button>
           );
         })}
       </div>
-
-      {openDay && (
-        <div className="timeline-popover">
-          <div className="timeline-popover-head">
-            <strong>
-              {openKeyEvent ? `${lang === 'he' ? openKeyEvent.he : openKeyEvent.en} · ` : ''}
-              {dayUTC(openDay).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })}
-            </strong>
-            <button type="button" className="timeline-close" onClick={() => setOpenDay(null)} aria-label={t('timelineCloseAria')}>
-              ×
-            </button>
-          </div>
-          {openEvents.length > 0 && (
-            <>
-              <div className="timeline-raw-label">{t('rawHeadlinesLabel')}</div>
-              <ul className="timeline-headlines">
-                {openEvents.map((n, i) => (
-                  <li key={i}>
-                    {n.url ? (
-                      <a href={n.url} target="_blank" rel="noopener noreferrer">
-                        {n.title}
-                      </a>
-                    ) : (
-                      n.title
-                    )}
-                    {n.domain && <span className="timeline-domain"> · {n.domain}</span>}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-          <div className="timeline-presets">
-            <button type="button" onClick={() => pick(openDay, 'day')}>
-              {t('presetDayOf')}
-            </button>
-            <button type="button" onClick={() => pick(openDay, 'week')}>
-              {t('presetWeekAfter')}
-            </button>
-            <button type="button" onClick={() => pick(openDay, 'around')}>
-              {t('presetAroundDays')}
-            </button>
-          </div>
-        </div>
-      )}
 
       <div
         ref={minimapRef}

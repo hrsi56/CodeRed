@@ -1,39 +1,45 @@
 import { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet.heat';
+import { maxHeatLayer, type HeatPoint, type HeatGradient } from '../leaflet/maxHeatLayer';
 
 export interface HeatLayerProps {
-  points: L.HeatLatLngTuple[];
-  gradient: L.ColorGradientConfig;
+  points: HeatPoint[];
+  gradient: HeatGradient;
   radius?: number;
   blur?: number;
   max?: number;
   maxZoom?: number;
   minOpacity?: number;
+  maxOpacity?: number;
+  gamma?: number;
 }
 
-// react-leaflet has no built-in heat layer, so this wraps leaflet.heat imperatively:
-// add it on mount, swap its data/options in place on change, remove on unmount.
-export function HeatLayer({ points, gradient, radius = 25, blur = 18, max, maxZoom, minOpacity }: HeatLayerProps) {
+// react-leaflet has no built-in heat layer, so this wraps our own MaxHeatLayer
+// imperatively: add it on mount, swap it for a fresh instance on data/option change,
+// remove on unmount. (Previously wrapped the `leaflet.heat` plugin — replaced because
+// its kernel-density blending accumulates alpha across overlapping points, which let
+// dense clusters of low-weight localities outshine real high-weight ones. See
+// MaxHeatLayer for the per-pixel-max approach that fixes this.)
+export function HeatLayer({
+  points,
+  gradient,
+  radius = 25,
+  blur = 18,
+  max,
+  maxZoom,
+  minOpacity,
+  maxOpacity,
+  gamma,
+}: HeatLayerProps) {
   const map = useMap();
 
   useEffect(() => {
-    const layer = L.heatLayer(points, { gradient, radius, blur, max, maxZoom, minOpacity });
-    try {
-      // If the map container is still size-0 at mount (briefly true in some embeds),
-      // leaflet.heat's first synchronous draw throws — but by then it has already
-      // registered its own 'moveend' redraw listener, so MapView's ResizeObserver
-      // (which calls invalidateSize() once the container gets a real size) is enough
-      // to make it self-heal without us doing anything special here.
-      layer.addTo(map);
-    } catch {
-      /* see comment above — recovers on the next invalidateSize()-triggered redraw */
-    }
+    const layer = maxHeatLayer(points, { gradient, radius, blur, max, maxZoom, minOpacity, maxOpacity, gamma });
+    layer.addTo(map);
     return () => {
       map.removeLayer(layer);
     };
-  }, [map, points, gradient, radius, blur, max, maxZoom, minOpacity]);
+  }, [map, points, gradient, radius, blur, max, maxZoom, minOpacity, maxOpacity, gamma]);
 
   return null;
 }

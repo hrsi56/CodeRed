@@ -41,10 +41,6 @@ export const strings = {
   topCitiesHeading: { he: 'יישובים מובילים (לפי כלל ה-MAX)', en: 'Top localities (MAX rule)' },
   noAlertsInRange: { he: 'אין התרעות בטווח שנבחר.', en: 'No alerts in the selected range.' },
 
-  deltaAlerts: { he: 'התרעות (א׳→ב׳)', en: 'Alerts (A→B)' },
-  deltaPeakHour: { he: 'שעת שיא', en: 'Peak hour' },
-  deltaTopLocality: { he: 'יישוב מוביל', en: 'Top locality' },
-
   timelineCloseAria: { he: 'סגור', en: 'Close' },
   presetDayOf: { he: 'יום האירוע', en: 'Day of' },
   presetWeekAfter: { he: 'שבוע אחרי', en: 'Week after' },
@@ -52,7 +48,7 @@ export const strings = {
   prevMonth: { he: 'החודש הקודם', en: 'Previous month' },
   nextMonth: { he: 'החודש הבא', en: 'Next month' },
   jumpToLatest: { he: 'להווה', en: 'Jump to present' },
-  rawHeadlinesLabel: { he: 'כותרות חדשות', en: 'News headlines' },
+  noNewsThisDay: { he: 'אין כותרות חדשות ליום זה', en: 'No news headlines for this day' },
   legendNews: { he: 'חדשות', en: 'News' },
   legendKeyEvent: { he: 'אירוע מרכזי', en: 'Key event' },
 } satisfies Dict;

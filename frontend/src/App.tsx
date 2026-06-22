@@ -6,7 +6,7 @@ import { usePanelData } from './data/usePanelData';
 import { Stage } from './components/Stage';
 import { DateRangePicker } from './components/DateRangePicker';
 import { Timeline } from './components/Timeline';
-import { DeltaStrip } from './components/DeltaStrip';
+import { DayInfoBar } from './components/DayInfoBar';
 import { FreshnessBanner } from './components/FreshnessBanner';
 import { Disclaimer } from './components/Disclaimer';
 import { LanguageToggle } from './components/LanguageToggle';
@@ -23,6 +23,10 @@ export default function App() {
   const [rangeB, setRangeB] = useState<DateRange | null>(null); // null = single view
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [lockScales, setLockScales] = useState(true);
+  // Shared between the timeline and both calendars: clicking a date anywhere opens
+  // the same "what happened that day" info bar (rendered once, between the timeline
+  // and the calendars).
+  const [openDay, setOpenDay] = useState<string | null>(null);
 
   const minDate = data ? new Date(`${data.meta.dataStartDate}T00:00:00Z`) : null;
   const maxDate = data?.meta.dataThroughDate ? new Date(`${data.meta.dataThroughDate}T00:00:00Z`) : null;
@@ -80,8 +84,18 @@ export default function App() {
       </header>
 
       <div className="timeline-zone">
-        <Timeline minDate={minDate} maxDate={maxDate} news={data.news} range={activeA} onPickRange={setRangeA} />
+        <Timeline
+          minDate={minDate}
+          maxDate={maxDate}
+          news={data.news}
+          range={activeA}
+          onPickRange={setRangeA}
+          openDay={openDay}
+          onOpenDayChange={setOpenDay}
+        />
       </div>
+
+      <DayInfoBar day={openDay} news={data.news} onPickRange={setRangeA} onClose={() => setOpenDay(null)} />
 
       <div className={`calendars${comparing ? ' comparing' : ''}`}>
         <DateRangePicker
@@ -93,6 +107,7 @@ export default function App() {
           numberOfMonths={months}
           variant="a"
           label={comparing ? t('panelA') : undefined}
+          onDayClick={setOpenDay}
         />
         {comparing && rangeB && (
           <DateRangePicker
@@ -104,15 +119,10 @@ export default function App() {
             numberOfMonths={months}
             variant="b"
             label={t('panelB')}
+            onDayClick={setOpenDay}
           />
         )}
       </div>
-
-      {comparing && (
-        <div className="delta-zone">
-          <DeltaStrip a={a} b={b} />
-        </div>
-      )}
 
       <Stage
         comparing={comparing}

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, Rectangle, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { CityWeight } from '../data/aggregate';
 import { useLanguage } from '../i18n/useLanguage';
 import { localeOf, localizedName } from '../i18n/strings';
@@ -15,7 +15,7 @@ export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, dayCount }
   const { lang, t } = useLanguage();
   const numberFmt = useMemo(() => new Intl.NumberFormat(localeOf(lang)), [lang]);
   const topCities = useMemo(
-    () => [...cityWeights].sort((a, b) => b.weight - a.weight).slice(0, 8),
+    () => [...cityWeights].sort((a, b) => b.weight - a.weight).slice(0, 10),
     [cityWeights],
   );
   const distinctZones = useMemo(
@@ -49,11 +49,21 @@ export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, dayCount }
                 labelFormatter={(h) => `${t('tooltipHourPrefix')} ${h}:00`}
                 contentStyle={{ direction: lang === 'he' ? 'rtl' : 'ltr', fontSize: 12 }}
               />
-              <Bar dataKey="count" radius={[2, 2, 0, 0]}>
-                {hourData.map((d) => (
-                  <Cell key={d.hour} fill={d.count === peakCount && peakCount > 0 ? '#bd0026' : '#f0843c'} />
-                ))}
-              </Bar>
+              <Bar
+                dataKey="count"
+                radius={[2, 2, 0, 0]}
+                // hourData is a fresh array/objects every render, which kept resetting
+                // Recharts' enter animation to frame 0 before it could finish — bars
+                // rendered permanently at ~0 height. Not animating avoids that entirely.
+                isAnimationActive={false}
+                // `Cell`-per-bar coloring is deprecated in recharts v3 (and no longer
+                // actually renders) — `shape` is the current way to vary a bar's fill.
+                shape={(props) => {
+                  const { payload, ...rest } = props as typeof props & { payload: { hour: number; count: number } };
+                  const fill = payload.count === peakCount && peakCount > 0 ? '#bd0026' : '#f0843c';
+                  return <Rectangle {...rest} fill={fill} />;
+                }}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
