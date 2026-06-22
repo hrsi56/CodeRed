@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { CityWeight } from '../data/aggregate';
 import type { FatalityEvent } from '../data/types';
+import { useLanguage } from '../i18n/LanguageContext';
+import { localeOf, localizedName } from '../i18n/strings';
 
 interface StatsPanelProps {
   hourHistogram: number[];
@@ -11,9 +13,9 @@ interface StatsPanelProps {
   dayCount: number;
 }
 
-const numberFmt = new Intl.NumberFormat('he-IL');
-
 export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, fatalities, dayCount }: StatsPanelProps) {
+  const { lang, t } = useLanguage();
+  const numberFmt = useMemo(() => new Intl.NumberFormat(localeOf(lang)), [lang]);
   const topCities = useMemo(
     () => [...cityWeights].sort((a, b) => b.weight - a.weight).slice(0, 10),
     [cityWeights],
@@ -30,23 +32,23 @@ export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, fatalities
   return (
     <div className="stats-panel">
       <div className="stat-grid">
-        <Stat label="התרעות בטווח" value={totalAlerts} />
-        <Stat label="ממוצע ליום" text={formatPerDay(totalAlerts, dayCount)} />
-        <Stat label="יישובים מותקפים" value={cityWeights.length} />
-        <Stat label="אזורים נפגעים" value={distinctZones} />
-        <Stat label="הרוגים מדווחים" value={totalFatalities} accent />
+        <Stat label={t('statAlertsInRange')} value={totalAlerts} numberFmt={numberFmt} />
+        <Stat label={t('statAvgPerDay')} text={formatPerDay(totalAlerts, dayCount, numberFmt)} />
+        <Stat label={t('statLocalitiesHit')} value={cityWeights.length} numberFmt={numberFmt} />
+        <Stat label={t('statZonesHit')} value={distinctZones} numberFmt={numberFmt} />
+        <Stat label={t('statFatalities')} value={totalFatalities} numberFmt={numberFmt} accent />
       </div>
 
-      <h3 className="stats-heading">התרעות לפי שעה ביממה</h3>
+      <h3 className="stats-heading">{t('hourChartHeading')}</h3>
       <div className="hour-chart">
         <ResponsiveContainer width="100%" height={140}>
           <BarChart data={hourData} margin={{ top: 4, right: 4, bottom: 0, left: -24 }}>
             <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} tickFormatter={(h) => `${h}`} />
             <YAxis tick={{ fontSize: 10 }} width={36} />
             <Tooltip
-              formatter={(v) => [numberFmt.format(Number(v)), 'התרעות']}
-              labelFormatter={(h) => `שעה ${h}:00`}
-              contentStyle={{ direction: 'rtl', fontSize: 12 }}
+              formatter={(v) => [numberFmt.format(Number(v)), t('tooltipAlerts')]}
+              labelFormatter={(h) => `${t('tooltipHourPrefix')} ${h}:00`}
+              contentStyle={{ direction: lang === 'he' ? 'rtl' : 'ltr', fontSize: 12 }}
             />
             <Bar dataKey="count" radius={[2, 2, 0, 0]}>
               {hourData.map((d) => (
@@ -57,14 +59,14 @@ export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, fatalities
         </ResponsiveContainer>
       </div>
 
-      <h3 className="stats-heading">יישובים מובילים (לפי כלל ה-MAX)</h3>
+      <h3 className="stats-heading">{t('topCitiesHeading')}</h3>
       {topCities.length === 0 ? (
-        <p className="stats-empty">אין התרעות בטווח שנבחר.</p>
+        <p className="stats-empty">{t('noAlertsInRange')}</p>
       ) : (
         <ol className="top-cities">
           {topCities.map((c) => (
             <li key={c.id}>
-              <span className="city-name">{c.he}</span>
+              <span className="city-name">{localizedName(lang, c.he, c.en)}</span>
               <span className="city-bar-wrap">
                 <span
                   className="city-bar"
@@ -80,16 +82,28 @@ export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, fatalities
   );
 }
 
-function formatPerDay(total: number, days: number): string {
+function formatPerDay(total: number, days: number, numberFmt: Intl.NumberFormat): string {
   if (days <= 0) return '0';
   const v = total / days;
   return v < 10 && v > 0 ? v.toFixed(1) : numberFmt.format(Math.round(v));
 }
 
-function Stat({ label, value, text, accent }: { label: string; value?: number; text?: string; accent?: boolean }) {
+function Stat({
+  label,
+  value,
+  text,
+  numberFmt,
+  accent,
+}: {
+  label: string;
+  value?: number;
+  text?: string;
+  numberFmt?: Intl.NumberFormat;
+  accent?: boolean;
+}) {
   return (
     <div className={`stat${accent ? ' stat-accent' : ''}`}>
-      <div className="stat-value">{text ?? numberFmt.format(value ?? 0)}</div>
+      <div className="stat-value">{text ?? numberFmt?.format(value ?? 0)}</div>
       <div className="stat-label">{label}</div>
     </div>
   );

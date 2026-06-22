@@ -7,9 +7,11 @@ export interface Meta {
 export interface City {
   id: string;
   he: string;
+  en: string | null;
   lat: number;
   lng: number;
   zone: string | null;
+  zoneEn: string | null;
 }
 
 export interface CitiesExport {

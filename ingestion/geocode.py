@@ -46,20 +46,29 @@ def build_city_union(raw: dict) -> tuple[list[dict], list[dict], list[dict]]:
             city_id = str(canonical["id"])
             lat, lng, area_code = canonical["lat"], canonical["lng"], canonical["area"]
             label = base
+            label_en = canonical.get("en")
         elif len(members) == 1:
             name, info = members[0]
             city_id = str(info["id"])
             lat, lng, area_code = info["lat"], info["lng"], info["area"]
             label = name
+            label_en = info.get("en")
         else:
+            # Synthesized base city (centroid of several sub-areas) — the base name
+            # itself has no entry in cities.json, so there is no source English label
+            # to attach. Leave it unset rather than guessing a translation (never
+            # invent data, CLAUDE.md Hard Rule #1); the frontend falls back to Hebrew.
             ids = sorted(str(info["id"]) for _, info in members)
             city_id = f"u{ids[0]}"
             lat = sum(info["lat"] for _, info in members) / len(members)
             lng = sum(info["lng"] for _, info in members) / len(members)
             area_code = members[0][1]["area"]
             label = base
+            label_en = None
 
-        cities.append({"city_id": city_id, "he": label, "lat": lat, "lng": lng, "area_code": area_code})
+        cities.append(
+            {"city_id": city_id, "he": label, "en": label_en, "lat": lat, "lng": lng, "area_code": area_code}
+        )
         for name, info in members:
             subareas.append(
                 {
@@ -89,8 +98,8 @@ def load_geocoding(conn: sqlite3.Connection) -> None:
         areas,
     )
     conn.executemany(
-        "INSERT OR REPLACE INTO cities (city_id, he, lat, lng, area_code) "
-        "VALUES (:city_id, :he, :lat, :lng, :area_code)",
+        "INSERT OR REPLACE INTO cities (city_id, he, en, lat, lng, area_code) "
+        "VALUES (:city_id, :he, :en, :lat, :lng, :area_code)",
         cities,
     )
     conn.executemany(

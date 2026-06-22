@@ -1,6 +1,6 @@
 import type { PanelData } from '../data/usePanelData';
-
-const numberFmt = new Intl.NumberFormat('he-IL');
+import { useLanguage } from '../i18n/LanguageContext';
+import { localeOf, localizedName } from '../i18n/strings';
 
 function peakHour(hist: number[]): number | null {
   let best = -1;
@@ -23,19 +23,23 @@ function pct(a: number, b: number): string {
 
 // Honest A↔B deltas (SPEC.md §6). A = right panel, B = left, matching the RTL order.
 export function DeltaStrip({ a, b }: { a: PanelData; b: PanelData }) {
+  const { lang, t } = useLanguage();
+  const numberFmt = new Intl.NumberFormat(localeOf(lang));
   const fatA = a.fatalities.reduce((s, f) => s + f.f, 0);
   const fatB = b.fatalities.reduce((s, f) => s + f.f, 0);
   const peakA = peakHour(a.hourHistogram);
   const peakB = peakHour(b.hourHistogram);
-  const topA = [...a.cityWeights].sort((x, y) => y.weight - x.weight)[0]?.he ?? '—';
-  const topB = [...b.cityWeights].sort((x, y) => y.weight - x.weight)[0]?.he ?? '—';
+  const topACity = [...a.cityWeights].sort((x, y) => y.weight - x.weight)[0];
+  const topBCity = [...b.cityWeights].sort((x, y) => y.weight - x.weight)[0];
+  const topA = topACity ? localizedName(lang, topACity.he, topACity.en) : '—';
+  const topB = topBCity ? localizedName(lang, topBCity.he, topBCity.en) : '—';
 
   return (
-    <div className="delta-strip" dir="rtl">
-      <Delta label="התרעות (א׳→ב׳)" value={`${numberFmt.format(a.totalAlerts)} → ${numberFmt.format(b.totalAlerts)}`} sub={pct(a.totalAlerts, b.totalAlerts)} />
-      <Delta label="הרוגים" value={`${numberFmt.format(fatA)} → ${numberFmt.format(fatB)}`} sub={pct(fatA, fatB)} />
-      <Delta label="שעת שיא" value={`${peakA ?? '—'} → ${peakB ?? '—'}`} sub="" />
-      <Delta label="יישוב מוביל" value={`${topA} → ${topB}`} sub="" />
+    <div className="delta-strip" dir={lang === 'he' ? 'rtl' : 'ltr'}>
+      <Delta label={t('deltaAlerts')} value={`${numberFmt.format(a.totalAlerts)} → ${numberFmt.format(b.totalAlerts)}`} sub={pct(a.totalAlerts, b.totalAlerts)} />
+      <Delta label={t('deltaFatalities')} value={`${numberFmt.format(fatA)} → ${numberFmt.format(fatB)}`} sub={pct(fatA, fatB)} />
+      <Delta label={t('deltaPeakHour')} value={`${peakA ?? '—'} → ${peakB ?? '—'}`} sub="" />
+      <Delta label={t('deltaTopLocality')} value={`${topA} → ${topB}`} sub="" />
     </div>
   );
 }

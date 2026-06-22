@@ -47,9 +47,9 @@ def _export_meta(data_through_date: str | None) -> None:
 
 def _export_cities(conn: sqlite3.Connection) -> None:
     cities = [
-        {"id": city_id, "he": he, "lat": lat, "lng": lng, "zone": zone_he}
-        for city_id, he, lat, lng, zone_he in conn.execute(
-            "SELECT c.city_id, c.he, c.lat, c.lng, a.zone_he "
+        {"id": city_id, "he": he, "en": en, "lat": lat, "lng": lng, "zone": zone_he, "zoneEn": zone_en}
+        for city_id, he, en, lat, lng, zone_he, zone_en in conn.execute(
+            "SELECT c.city_id, c.he, c.en, c.lat, c.lng, a.zone_he, a.zone_en "
             "FROM cities c LEFT JOIN areas a ON a.area_code = c.area_code"
         )
     ]

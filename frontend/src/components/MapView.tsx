@@ -5,6 +5,8 @@ import { theme } from '../config/theme';
 import { ISRAEL_BOUNDS, ISRAEL_CENTER } from '../config/constants';
 import type { FatalityEvent } from '../data/types';
 import type { CityWeight } from '../data/aggregate';
+import { useLanguage } from '../i18n/LanguageContext';
+import { localeOf } from '../i18n/strings';
 
 interface MapViewProps {
   cityWeights: CityWeight[];
@@ -27,8 +29,8 @@ function MapResizeHandler() {
   return null;
 }
 
-const formatHebrewDate = (isoDate: string) =>
-  new Date(`${isoDate}T00:00:00Z`).toLocaleDateString('he-IL', {
+const formatDate = (isoDate: string, locale: string) =>
+  new Date(`${isoDate}T00:00:00Z`).toLocaleDateString(locale, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -36,6 +38,8 @@ const formatHebrewDate = (isoDate: string) =>
   });
 
 export function MapView({ cityWeights, fatalities, showHeatmap, showFatalities, heatmapMax }: MapViewProps) {
+  const { lang, t } = useLanguage();
+  const locale = localeOf(lang);
   const heatPoints = useMemo<[number, number, number][]>(
     () => cityWeights.map((c) => [c.lat, c.lng, c.weight]),
     [cityWeights],
@@ -85,18 +89,18 @@ export function MapView({ cityWeights, fatalities, showHeatmap, showFatalities, 
             }}
           >
             <Popup>
-              <div style={{ direction: 'rtl', textAlign: 'right', minWidth: 180 }}>
+              <div style={{ direction: lang === 'he' ? 'rtl' : 'ltr', textAlign: lang === 'he' ? 'right' : 'left', minWidth: 180 }}>
                 <strong>{ev.loc}</strong>
                 <br />
-                {formatHebrewDate(ev.d)}
+                {formatDate(ev.d, locale)}
                 <br />
-                הרוגים מדווחים: <strong>{ev.f}</strong>
+                {t('fatalitiesReportedLabel')} <strong>{ev.f}</strong>
                 <br />
-                סוג אירוע: {ev.t}
+                {t('eventTypeLabel')} {ev.t}
                 {ev.src && (
                   <>
                     <br />
-                    <span style={{ fontSize: 11, color: '#666' }}>מקורות: {ev.src}</span>
+                    <span style={{ fontSize: 11, color: '#666' }}>{t('sourcesLabel')} {ev.src}</span>
                   </>
                 )}
               </div>

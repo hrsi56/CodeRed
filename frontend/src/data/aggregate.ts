@@ -16,9 +16,11 @@ export function dayIndexToDate(dayIndex: number): Date {
 export interface CityWeight {
   id: string;
   he: string;
+  en: string | null;
   lat: number;
   lng: number;
   zone: string | null;
+  zoneEn: string | null;
   weight: number;
 }
 
@@ -50,7 +52,16 @@ export function computeCityWeights(
   for (const [cityId, weight] of maxByCityId) {
     const city = cityById.get(cityId);
     if (!city) continue;
-    weights.push({ id: city.id, he: city.he, lat: city.lat, lng: city.lng, zone: city.zone, weight });
+    weights.push({
+      id: city.id,
+      he: city.he,
+      en: city.en,
+      lat: city.lat,
+      lng: city.lng,
+      zone: city.zone,
+      zoneEn: city.zoneEn,
+      weight,
+    });
   }
   return weights;
 }

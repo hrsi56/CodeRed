@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS areas (
 CREATE TABLE IF NOT EXISTS cities (
     city_id TEXT PRIMARY KEY,
     he TEXT NOT NULL,
+    en TEXT,
     lat REAL NOT NULL,
     lng REAL NOT NULL,
     area_code INTEGER REFERENCES areas(area_code)
@@ -75,8 +76,19 @@ CREATE INDEX IF NOT EXISTS idx_news_date ON news(event_date);
 """
 
 
+def _migrate(conn: sqlite3.Connection) -> None:
+    """One-off column additions for DBs created before this column existed.
+    CREATE TABLE IF NOT EXISTS doesn't alter existing tables, and the committed
+    atlas.sqlite predates the cities.en column added for bilingual locality names."""
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(cities)")}
+    if "en" not in existing:
+        conn.execute("ALTER TABLE cities ADD COLUMN en TEXT")
+        conn.commit()
+
+
 def connect() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.executescript(SCHEMA)
+    _migrate(conn)
     return conn
