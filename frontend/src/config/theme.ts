@@ -22,10 +22,4 @@ export const theme = {
       1.0: 'rgba(189,0,38,0.95)',
     },
   },
-
-  // Fatality points (ACLED conflict events) — dark red, sized by sqrt(fatalities).
-  fatality: {
-    stroke: '#5a0a0a',
-    fill: '#c1121f',
-  },
 } as const;

@@ -9,7 +9,7 @@ import { DeltaStrip } from './components/DeltaStrip';
 import { FreshnessBanner } from './components/FreshnessBanner';
 import { Disclaimer } from './components/Disclaimer';
 import { LanguageToggle } from './components/LanguageToggle';
-import { useLanguage } from './i18n/LanguageContext';
+import { useLanguage } from './i18n/useLanguage';
 
 const DAY_MS = 86_400_000;
 
@@ -19,7 +19,6 @@ export default function App() {
   const [rangeA, setRangeA] = useState<DateRange>();
   const [rangeB, setRangeB] = useState<DateRange | null>(null); // null = single view
   const [showHeatmap, setShowHeatmap] = useState(true);
-  const [showFatalities, setShowFatalities] = useState(true);
   const [lockScales, setLockScales] = useState(true);
 
   const minDate = data ? new Date(`${data.meta.dataStartDate}T00:00:00Z`) : null;
@@ -60,10 +59,6 @@ export default function App() {
             <input type="checkbox" checked={showHeatmap} onChange={(e) => setShowHeatmap(e.target.checked)} />
             {t('layerHeatmap')}
           </label>
-          <label>
-            <input type="checkbox" checked={showFatalities} onChange={(e) => setShowFatalities(e.target.checked)} />
-            {t('layerFatalities')}
-          </label>
           {comparing && (
             <label>
               <input type="checkbox" checked={lockScales} onChange={(e) => setLockScales(e.target.checked)} />
@@ -93,7 +88,6 @@ export default function App() {
           derived={a}
           heatmapMax={heatmapMaxA}
           showHeatmap={showHeatmap}
-          showFatalities={showFatalities}
           news={data.news}
         />
         {comparing && rangeB && (
@@ -106,7 +100,6 @@ export default function App() {
             derived={b}
             heatmapMax={heatmapMaxB}
             showHeatmap={showHeatmap}
-            showFatalities={showFatalities}
             news={data.news}
           />
         )}

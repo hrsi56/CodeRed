@@ -25,16 +25,6 @@ export type SubareaDailyRow = [number, number, number];
 // hourDaily[dayIndex] = counts per hour 0..23 (Israel TZ).
 export type HourDaily = number[][];
 
-export interface FatalityEvent {
-  d: string;
-  lat: number;
-  lng: number;
-  f: number;
-  t: string;
-  loc: string;
-  src: string | null;
-}
-
 export interface NewsEvent {
   d: string;
   title: string;
@@ -47,6 +37,5 @@ export interface AtlasData {
   cities: CitiesExport;
   subareaDaily: SubareaDailyRow[];
   hourDaily: HourDaily;
-  fatalities: FatalityEvent[];
   news: NewsEvent[];
 }

@@ -14,7 +14,6 @@ interface MapPanelProps {
   derived: PanelData;
   heatmapMax: number;
   showHeatmap: boolean;
-  showFatalities: boolean;
   news: NewsEvent[];
 }
 
@@ -29,7 +28,6 @@ export function MapPanel({
   derived,
   heatmapMax,
   showHeatmap,
-  showFatalities,
   news,
 }: MapPanelProps) {
   return (
@@ -38,9 +36,7 @@ export function MapPanel({
         {title && <div className="panel-badge">{title}</div>}
         <MapView
           cityWeights={derived.cityWeights}
-          fatalities={derived.fatalities}
           showHeatmap={showHeatmap}
-          showFatalities={showFatalities}
           heatmapMax={heatmapMax}
         />
       </div>
@@ -51,7 +47,6 @@ export function MapPanel({
           hourHistogram={derived.hourHistogram}
           totalAlerts={derived.totalAlerts}
           cityWeights={derived.cityWeights}
-          fatalities={derived.fatalities}
           dayCount={derived.dayCount}
         />
       </div>

@@ -3,7 +3,7 @@ import type { PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent }
 import type { DateRange } from 'react-day-picker';
 import type { NewsEvent } from '../data/types';
 import { KEY_EVENTS } from '../data/keyEvents';
-import { useLanguage } from '../i18n/LanguageContext';
+import { useLanguage } from '../i18n/useLanguage';
 import { localeOf } from '../i18n/strings';
 
 interface TimelineProps {
@@ -116,17 +116,14 @@ export function Timeline({ minDate, maxDate, news, range, onPickRange }: Timelin
   // it. Guarded by a ref so manual panning (range unchanged) never yanks the view.
   const rangeFromMs = range.from ? clamp(range.from.getTime(), minDateMs, maxDateMs) : null;
   const rangeToMs = range.to ? clamp(range.to.getTime(), minDateMs, maxDateMs) : rangeFromMs;
-  const lastRangeFrom = useRef<number | null>(rangeFromMs);
-  useEffect(() => {
-    if (rangeFromMs === null) return;
-    if (lastRangeFrom.current === rangeFromMs) return;
-    lastRangeFrom.current = rangeFromMs;
+  const [lastRangeFrom, setLastRangeFrom] = useState<number | null>(rangeFromMs);
+  if (rangeFromMs !== null && lastRangeFrom !== rangeFromMs) {
+    setLastRangeFrom(rangeFromMs);
     if (rangeFromMs < viewStart || rangeFromMs > viewEnd) {
       const mid = rangeToMs !== null ? (rangeFromMs + rangeToMs) / 2 : rangeFromMs;
       setViewStart(clampView(mid - WINDOW_MS / 2));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rangeFromMs, rangeToMs]);
+  }
 
   // Also resync to the latest window if maxDate's value changes after mount.
   const seenMaxDate = useRef(maxDateMs);

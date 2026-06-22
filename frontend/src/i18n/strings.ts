@@ -16,7 +16,6 @@ export const strings = {
   },
 
   layerHeatmap: { he: 'מפת חום', en: 'Heatmap' },
-  layerFatalities: { he: 'הרוגים (ACLED)', en: 'Fatalities (ACLED)' },
   lockScales: { he: 'נעילת קנה־מידה', en: 'Lock scale' },
   removeComparison: { he: 'הסר השוואה', en: 'Remove comparison' },
   addComparison: { he: 'הוסף השוואה', en: 'Add comparison' },
@@ -34,7 +33,6 @@ export const strings = {
   statAvgPerDay: { he: 'ממוצע ליום', en: 'Avg / day' },
   statLocalitiesHit: { he: 'יישובים מותקפים', en: 'Localities hit' },
   statZonesHit: { he: 'אזורים נפגעים', en: 'Zones hit' },
-  statFatalities: { he: 'הרוגים מדווחים', en: 'Reported fatalities' },
   hourChartHeading: { he: 'התרעות לפי שעה ביממה', en: 'Alerts by hour of day' },
   tooltipAlerts: { he: 'התרעות', en: 'Alerts' },
   tooltipHourPrefix: { he: 'שעה', en: 'Hour' },
@@ -42,13 +40,8 @@ export const strings = {
   noAlertsInRange: { he: 'אין התרעות בטווח שנבחר.', en: 'No alerts in the selected range.' },
 
   deltaAlerts: { he: 'התרעות (א׳→ב׳)', en: 'Alerts (A→B)' },
-  deltaFatalities: { he: 'הרוגים', en: 'Fatalities' },
   deltaPeakHour: { he: 'שעת שיא', en: 'Peak hour' },
   deltaTopLocality: { he: 'יישוב מוביל', en: 'Top locality' },
-
-  fatalitiesReportedLabel: { he: 'הרוגים מדווחים:', en: 'Reported fatalities:' },
-  eventTypeLabel: { he: 'סוג אירוע:', en: 'Event type:' },
-  sourcesLabel: { he: 'מקורות:', en: 'Sources:' },
 
   timelineCloseAria: { he: 'סגור', en: 'Close' },
   presetDayOf: { he: 'יום האירוע', en: 'Day of' },
@@ -57,7 +50,7 @@ export const strings = {
   prevMonth: { he: 'החודש הקודם', en: 'Previous month' },
   nextMonth: { he: 'החודש הבא', en: 'Next month' },
   jumpToLatest: { he: 'להווה', en: 'Jump to present' },
-  rawHeadlinesLabel: { he: 'כותרות חדשות (GDELT, אנגלית)', en: 'News headlines (GDELT)' },
+  rawHeadlinesLabel: { he: 'כותרות חדשות', en: 'News headlines' },
   legendNews: { he: 'חדשות', en: 'News' },
   legendKeyEvent: { he: 'אירוע מרכזי', en: 'Key event' },
 } satisfies Dict;

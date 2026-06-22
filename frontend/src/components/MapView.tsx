@@ -1,18 +1,13 @@
 import { useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import { HeatLayer } from './HeatLayer';
 import { theme } from '../config/theme';
 import { ISRAEL_BOUNDS, ISRAEL_CENTER } from '../config/constants';
-import type { FatalityEvent } from '../data/types';
 import type { CityWeight } from '../data/aggregate';
-import { useLanguage } from '../i18n/LanguageContext';
-import { localeOf } from '../i18n/strings';
 
 interface MapViewProps {
   cityWeights: CityWeight[];
-  fatalities: FatalityEvent[];
   showHeatmap: boolean;
-  showFatalities: boolean;
   heatmapMax: number;
 }
 
@@ -29,17 +24,7 @@ function MapResizeHandler() {
   return null;
 }
 
-const formatDate = (isoDate: string, locale: string) =>
-  new Date(`${isoDate}T00:00:00Z`).toLocaleDateString(locale, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
-
-export function MapView({ cityWeights, fatalities, showHeatmap, showFatalities, heatmapMax }: MapViewProps) {
-  const { lang, t } = useLanguage();
-  const locale = localeOf(lang);
+export function MapView({ cityWeights, showHeatmap, heatmapMax }: MapViewProps) {
   const heatPoints = useMemo<[number, number, number][]>(
     () => cityWeights.map((c) => [c.lat, c.lng, c.weight]),
     [cityWeights],
@@ -74,39 +59,6 @@ export function MapView({ cityWeights, fatalities, showHeatmap, showFatalities, 
           maxZoom={12}
         />
       )}
-
-      {showFatalities &&
-        fatalities.map((ev, i) => (
-          <CircleMarker
-            key={`${ev.d}-${ev.loc}-${i}`}
-            center={[ev.lat, ev.lng]}
-            radius={Math.max(4, Math.min(34, Math.sqrt(ev.f) * 2.2))}
-            pathOptions={{
-              color: theme.fatality.stroke,
-              weight: 1,
-              fillColor: theme.fatality.fill,
-              fillOpacity: 0.6,
-            }}
-          >
-            <Popup>
-              <div style={{ direction: lang === 'he' ? 'rtl' : 'ltr', textAlign: lang === 'he' ? 'right' : 'left', minWidth: 180 }}>
-                <strong>{ev.loc}</strong>
-                <br />
-                {formatDate(ev.d, locale)}
-                <br />
-                {t('fatalitiesReportedLabel')} <strong>{ev.f}</strong>
-                <br />
-                {t('eventTypeLabel')} {ev.t}
-                {ev.src && (
-                  <>
-                    <br />
-                    <span style={{ fontSize: 11, color: '#666' }}>{t('sourcesLabel')} {ev.src}</span>
-                  </>
-                )}
-              </div>
-            </Popup>
-          </CircleMarker>
-        ))}
     </MapContainer>
   );
 }

@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { DayPicker, type DateRange } from 'react-day-picker';
 import { he, enUS } from 'react-day-picker/locale';
 import 'react-day-picker/style.css';
 import type { NewsEvent } from '../data/types';
 import { KEY_EVENTS } from '../data/keyEvents';
-import { useLanguage } from '../i18n/LanguageContext';
+import { useLanguage } from '../i18n/useLanguage';
 
 interface DateRangePickerProps {
   range: DateRange;
@@ -30,13 +30,11 @@ export function DateRangePicker({ range, onRangeChange, minDate, maxDate, news }
   const rangeFromKey = range.from ? range.from.getTime() : null;
   // Compare against the last *applied* value (not a "did I mount" flag) so React
   // StrictMode's double-effect-invoke can't spuriously yank the month on first load.
-  const appliedFrom = useRef(rangeFromKey);
-  useEffect(() => {
-    if (rangeFromKey === appliedFrom.current) return;
-    appliedFrom.current = rangeFromKey;
+  const [appliedFrom, setAppliedFrom] = useState(rangeFromKey);
+  if (rangeFromKey !== appliedFrom) {
+    setAppliedFrom(rangeFromKey);
     if (range.from) setMonth(range.from);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rangeFromKey]);
+  }
 
   // Local-date days (DayPicker compares against local-midnight Dates) that carry a
   // GDELT news marker or a curated key event, for calendar dot/highlight modifiers.

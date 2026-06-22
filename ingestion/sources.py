@@ -19,4 +19,8 @@ GDELT_DOC_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
 # GDELT throttles to ~1 request / 5 s; pace a little slower to be safe.
 GDELT_MIN_INTERVAL_SECONDS = 6
 
+# Fallback news track (SPEC.md §3.4) — Wikipedia "Current events" daily portal pages,
+# used to fill timeline days GDELT couldn't reach. MediaWiki action API, no key.
+WIKIPEDIA_API_URL = "https://en.wikipedia.org/w/api.php"
+
 REQUEST_HEADERS = {"User-Agent": "code-red-atlas-ingestion/1 (+https://github.com/hrsi56/CodeRed)"}

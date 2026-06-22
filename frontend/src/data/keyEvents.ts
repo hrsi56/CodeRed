@@ -4,17 +4,14 @@ export interface KeyEvent {
   en: string; // 1-3 words
 }
 
-// Hand-curated, real documented events (not GDELT-derived) with a short bilingual
-// label, per the user's request for prominent short-title markers on the timeline.
+// Hand-curated, real documented events with a short bilingual label — the sparse
+// "headline" layer over the exhaustive auto-news red dots.
 //
 // CLAUDE.md Hard Rule #1 (never invent data) applies to DATES too, not just whether
-// an event happened. Everything below is a real, widely-documented event; the risk is
-// date precision, so this list is meant to be reviewed/corrected by the project owner.
-// The GDELT auto-news (red dots) remains the exhaustive secondary layer — this is just
-// the sparse "headline" layer.
-//
-// NOTE: events from 2025 onward (marked) are near/after the assistant's knowledge
-// horizon — verify these dates especially before trusting them.
+// an event happened. Every entry below is cross-checked against the project's own
+// pulled news data (frontend/public/data/news.json — Wikipedia "Current events" +
+// GDELT): each date carries a corroborating headline in that dataset. Still owner-
+// reviewable, but no longer guesswork.
 export const KEY_EVENTS: KeyEvent[] = [
   { date: '2023-10-07', he: '7 באוקטובר', en: 'Oct. 7 attack' },
   { date: '2023-10-27', he: 'פלישה קרקעית', en: 'Ground invasion' },
@@ -28,8 +25,9 @@ export const KEY_EVENTS: KeyEvent[] = [
   { date: '2024-10-16', he: 'חיסול סינוואר', en: 'Sinwar killed' },
   { date: '2024-11-27', he: 'הפסקת אש בלבנון', en: 'Lebanon ceasefire' },
   { date: '2025-01-19', he: 'הפסקת אש בעזה', en: 'Gaza ceasefire' },
-  // --- verify dates below (2025+) ---
   { date: '2025-06-13', he: 'מלחמה עם איראן', en: 'Iran war begins' },
   { date: '2025-06-22', he: 'תקיפה אמריקאית', en: 'US strikes Iran' },
   { date: '2025-06-24', he: 'הפסקת אש עם איראן', en: 'Iran ceasefire' },
+  { date: '2025-10-10', he: 'הסכם הפסקת אש בעזה', en: 'Gaza ceasefire deal' },
+  { date: '2026-04-16', he: 'הפסקת אש בלבנון (2026)', en: 'Lebanon ceasefire (2026)' },
 ];

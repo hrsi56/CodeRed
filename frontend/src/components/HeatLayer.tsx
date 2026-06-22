@@ -33,7 +33,6 @@ export function HeatLayer({ points, gradient, radius = 25, blur = 18, max, maxZo
     return () => {
       map.removeLayer(layer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, points, gradient, radius, blur, max, maxZoom, minOpacity]);
 
   return null;

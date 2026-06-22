@@ -1,5 +1,5 @@
 import type { PanelData } from '../data/usePanelData';
-import { useLanguage } from '../i18n/LanguageContext';
+import { useLanguage } from '../i18n/useLanguage';
 import { localeOf, localizedName } from '../i18n/strings';
 
 function peakHour(hist: number[]): number | null {
@@ -25,8 +25,6 @@ function pct(a: number, b: number): string {
 export function DeltaStrip({ a, b }: { a: PanelData; b: PanelData }) {
   const { lang, t } = useLanguage();
   const numberFmt = new Intl.NumberFormat(localeOf(lang));
-  const fatA = a.fatalities.reduce((s, f) => s + f.f, 0);
-  const fatB = b.fatalities.reduce((s, f) => s + f.f, 0);
   const peakA = peakHour(a.hourHistogram);
   const peakB = peakHour(b.hourHistogram);
   const topACity = [...a.cityWeights].sort((x, y) => y.weight - x.weight)[0];
@@ -37,7 +35,6 @@ export function DeltaStrip({ a, b }: { a: PanelData; b: PanelData }) {
   return (
     <div className="delta-strip" dir={lang === 'he' ? 'rtl' : 'ltr'}>
       <Delta label={t('deltaAlerts')} value={`${numberFmt.format(a.totalAlerts)} → ${numberFmt.format(b.totalAlerts)}`} sub={pct(a.totalAlerts, b.totalAlerts)} />
-      <Delta label={t('deltaFatalities')} value={`${numberFmt.format(fatA)} → ${numberFmt.format(fatB)}`} sub={pct(fatA, fatB)} />
       <Delta label={t('deltaPeakHour')} value={`${peakA ?? '—'} → ${peakB ?? '—'}`} sub="" />
       <Delta label={t('deltaTopLocality')} value={`${topA} → ${topB}`} sub="" />
     </div>

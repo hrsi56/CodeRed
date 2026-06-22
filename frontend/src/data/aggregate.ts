@@ -1,5 +1,5 @@
 import { DATA_START_DATE } from '../config/constants';
-import type { CitiesExport, FatalityEvent, HourDaily, SubareaDailyRow } from './types';
+import type { CitiesExport, HourDaily, SubareaDailyRow } from './types';
 
 const MS_PER_DAY = 86_400_000;
 const dataStart = new Date(`${DATA_START_DATE}T00:00:00Z`);
@@ -88,12 +88,4 @@ export function totalAlertsInRange(
   endDayIndex: number,
 ): number {
   return computeHourHistogram(hourDaily, startDayIndex, endDayIndex).reduce((a, b) => a + b, 0);
-}
-
-export function filterFatalitiesByDate(
-  fatalities: FatalityEvent[],
-  fromIso: string,
-  toIso: string,
-): FatalityEvent[] {
-  return fatalities.filter((f) => f.d >= fromIso && f.d <= toIso);
 }

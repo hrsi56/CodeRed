@@ -1,13 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { strings, type Lang, type StringKey } from './strings';
-
-interface LanguageContextValue {
-  lang: Lang;
-  setLang: (lang: Lang) => void;
-  t: (key: StringKey) => string;
-}
-
-const LanguageContext = createContext<LanguageContextValue | null>(null);
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { strings, type Lang } from './strings';
+import { LanguageContext, type LanguageContextValue } from './context';
 
 const STORAGE_KEY = 'codered-lang';
 
@@ -37,10 +30,4 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
-}
-
-export function useLanguage(): LanguageContextValue {
-  const ctx = useContext(LanguageContext);
-  if (!ctx) throw new Error('useLanguage must be used within a LanguageProvider');
-  return ctx;
 }
