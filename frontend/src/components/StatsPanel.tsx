@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { CityWeight } from '../data/aggregate';
-import type { FatalityEvent } from '../data/types';
 import { useLanguage } from '../i18n/LanguageContext';
 import { localeOf, localizedName } from '../i18n/strings';
 
@@ -9,11 +8,10 @@ interface StatsPanelProps {
   hourHistogram: number[];
   totalAlerts: number;
   cityWeights: CityWeight[];
-  fatalities: FatalityEvent[];
   dayCount: number;
 }
 
-export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, fatalities, dayCount }: StatsPanelProps) {
+export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, dayCount }: StatsPanelProps) {
   const { lang, t } = useLanguage();
   const numberFmt = useMemo(() => new Intl.NumberFormat(localeOf(lang)), [lang]);
   const topCities = useMemo(
@@ -24,7 +22,6 @@ export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, fatalities
     () => new Set(cityWeights.map((c) => c.zone).filter(Boolean)).size,
     [cityWeights],
   );
-  const totalFatalities = useMemo(() => fatalities.reduce((a, f) => a + f.f, 0), [fatalities]);
 
   const hourData = hourHistogram.map((count, hour) => ({ hour, count }));
   const peakCount = Math.max(...hourHistogram, 0);
@@ -36,7 +33,6 @@ export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, fatalities
         <Stat label={t('statAvgPerDay')} text={formatPerDay(totalAlerts, dayCount, numberFmt)} />
         <Stat label={t('statLocalitiesHit')} value={cityWeights.length} numberFmt={numberFmt} />
         <Stat label={t('statZonesHit')} value={distinctZones} numberFmt={numberFmt} />
-        <Stat label={t('statFatalities')} value={totalFatalities} numberFmt={numberFmt} accent />
       </div>
 
       <h3 className="stats-heading">{t('hourChartHeading')}</h3>
