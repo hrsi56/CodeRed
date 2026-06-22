@@ -49,6 +49,27 @@ body {
   font-weight: 600;
 }
 
+.lang-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.lang-toggle button {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.lang-toggle button.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 .freshness-banner {
   font-size: 13px;
   color: var(--ink-soft);
@@ -156,12 +177,70 @@ body {
   position: relative;
 }
 
-.timeline-track {
+.timeline-zoom-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.timeline-month-label {
+  font-size: 14px;
+  min-width: 110px;
+  text-align: center;
+}
+
+.timeline-nav {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: #f7f2e7;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.timeline-nav:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.timeline-jump-latest {
+  margin-inline-start: auto;
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.timeline-jump-latest:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* The zoomed ~1-month track. All children are positioned with physical `left`%
+   (never logical inset-inline-*) because Timeline.tsx already bakes the RTL/LTR
+   flip into the percentage itself — see leftPctInWindow/leftPctFull — so a single
+   transform: translateX(-50%) centers correctly in both directions. */
+.timeline-zoom-track {
   position: relative;
-  height: 26px;
+  height: 84px;
   background: #efe7d6;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 6px;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  overflow: hidden;
+}
+
+.timeline-zoom-track:active {
+  cursor: grabbing;
 }
 
 .timeline-range {
@@ -170,36 +249,40 @@ body {
   bottom: 0;
   background: rgba(215, 38, 61, 0.14);
   border-inline: 1px solid rgba(215, 38, 61, 0.5);
+  pointer-events: none;
 }
 
-.timeline-year {
+.timeline-week-grid {
   position: absolute;
   top: 0;
-  bottom: 0;
+  bottom: 16px;
   width: 0;
-  border-inline-start: 1px dashed #cdbfa6;
+  border-left: 1px dashed #cdbfa6;
+  pointer-events: none;
 }
 
-.timeline-year span {
+.timeline-week-grid span {
   position: absolute;
-  top: 4px;
-  inset-inline-start: 3px;
+  bottom: -16px;
+  left: 0;
+  transform: translateX(-50%);
   font-size: 10px;
   color: var(--ink-soft);
+  white-space: nowrap;
 }
 
 .timeline-dot {
   position: absolute;
-  top: 50%;
+  top: 48px;
   width: 9px;
   height: 9px;
-  margin: -5px -5px 0 0;
   padding: 0;
   border-radius: 50%;
   background: #c1121f;
   border: 1px solid #fff;
   cursor: pointer;
-  transform: translateY(-50%);
+  transform: translateX(-50%);
+  z-index: 2;
 }
 
 .timeline-dot:hover,
@@ -207,13 +290,54 @@ body {
   background: #7a0a0a;
   width: 12px;
   height: 12px;
-  margin: -6px -6px 0 0;
+}
+
+.timeline-key-event {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  z-index: 3;
+  max-width: 120px;
+}
+
+.timeline-key-event-label {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  color: #fff;
+  background: #7a0a0a;
+  border-radius: 4px;
+  padding: 2px 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.timeline-key-event::after {
+  content: '';
+  width: 2px;
+  height: 26px;
+  background: #7a0a0a;
+  opacity: 0.5;
+}
+
+.timeline-key-event:hover .timeline-key-event-label,
+.timeline-key-event.open .timeline-key-event-label {
+  background: #4a0606;
 }
 
 .timeline-popover {
-  position: absolute;
-  top: 32px;
-  inset-inline-start: 0;
+  position: relative;
   z-index: 1200;
   max-width: 420px;
   background: #fff;
@@ -221,6 +345,131 @@ body {
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   padding: 10px 12px;
+  margin-top: 8px;
+}
+
+.timeline-raw-label {
+  font-size: 10px;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+
+.timeline-minimap {
+  position: relative;
+  height: 30px;
+  margin-top: 8px;
+  background: #efe7d6;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+
+.timeline-minimap-year {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px solid #cdbfa6;
+  pointer-events: none;
+}
+
+.timeline-minimap-year span {
+  position: absolute;
+  bottom: 1px;
+  left: 2px;
+  font-size: 9px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.timeline-minimap-range {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(215, 38, 61, 0.22);
+  pointer-events: none;
+}
+
+.timeline-minimap-key {
+  position: absolute;
+  top: 0;
+  height: 11px;
+  width: 2px;
+  background: #7a0a0a;
+  pointer-events: none;
+}
+
+.timeline-minimap-viewport {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  border: 1.5px solid #1a4f8a;
+  background: rgba(26, 79, 138, 0.12);
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+/* Calendar event markers + legend */
+.range-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rdp-has-news:not(.rdp-selected) .rdp-day_button,
+.rdp-has-news:not([data-selected]) .rdp-day_button {
+  position: relative;
+}
+
+.rdp-has-news .rdp-day_button::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #c1121f;
+}
+
+.rdp-key-event .rdp-day_button {
+  box-shadow: inset 0 0 0 2px #7a0a0a;
+  font-weight: 700;
+}
+
+.calendar-legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.legend-news {
+  background: #c1121f;
+}
+
+.legend-key {
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 2px #7a0a0a;
 }
 
 .timeline-popover-head {

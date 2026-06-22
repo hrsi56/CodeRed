@@ -8,10 +8,13 @@ import { Timeline } from './components/Timeline';
 import { DeltaStrip } from './components/DeltaStrip';
 import { FreshnessBanner } from './components/FreshnessBanner';
 import { Disclaimer } from './components/Disclaimer';
+import { LanguageToggle } from './components/LanguageToggle';
+import { useLanguage } from './i18n/LanguageContext';
 
 const DAY_MS = 86_400_000;
 
 export default function App() {
+  const { lang, t } = useLanguage();
   const { data, loading, error } = useAtlasData();
   const [rangeA, setRangeA] = useState<DateRange>();
   const [rangeB, setRangeB] = useState<DateRange | null>(null); // null = single view
@@ -28,10 +31,10 @@ export default function App() {
   const a = usePanelData(data, activeA);
   const b = usePanelData(data, rangeB ?? undefined);
 
-  if (loading) return <div className="status-screen">טוען נתונים…</div>;
-  if (error || !data) return <div className="status-screen">שגיאה בטעינת הנתונים{error ? `: ${error}` : ''}</div>;
+  if (loading) return <div className="status-screen">{t('loading')}</div>;
+  if (error || !data) return <div className="status-screen">{t('errorPrefix')}{error ? `: ${error}` : ''}</div>;
   if (!minDate || !maxDate || !activeA) {
-    return <div className="status-screen">אין עדיין נתונים זמינים — תהליך העדכון היומי עדיין לא רץ בהצלחה.</div>;
+    return <div className="status-screen">{t('noDataYet')}</div>;
   }
 
   const comparing = rangeB !== null;
@@ -44,35 +47,36 @@ export default function App() {
     setRangeB({ from: minDate, to: new Date(Math.min(minDate.getTime() + 30 * DAY_MS, maxDate.getTime())) });
 
   return (
-    <div className="app" dir="rtl">
+    <div className="app" dir={lang === 'he' ? 'rtl' : 'ltr'}>
       <header className="app-header">
         <div className="app-header-row">
-          <h1>מפת התרעות צבע אדום — היסטוריה</h1>
+          <h1>{t('appTitle')}</h1>
+          <LanguageToggle />
           <FreshnessBanner meta={data.meta} />
         </div>
         <Timeline minDate={minDate} maxDate={maxDate} news={data.news} range={activeA} onPickRange={setRangeA} />
         <div className="controls">
           <label>
             <input type="checkbox" checked={showHeatmap} onChange={(e) => setShowHeatmap(e.target.checked)} />
-            מפת חום
+            {t('layerHeatmap')}
           </label>
           <label>
             <input type="checkbox" checked={showFatalities} onChange={(e) => setShowFatalities(e.target.checked)} />
-            הרוגים (ACLED)
+            {t('layerFatalities')}
           </label>
           {comparing && (
             <label>
               <input type="checkbox" checked={lockScales} onChange={(e) => setLockScales(e.target.checked)} />
-              נעילת קנה־מידה
+              {t('lockScales')}
             </label>
           )}
           {comparing ? (
             <button type="button" className="ctrl-btn" onClick={() => setRangeB(null)}>
-              הסר השוואה
+              {t('removeComparison')}
             </button>
           ) : (
             <button type="button" className="ctrl-btn" onClick={addComparison}>
-              הוסף השוואה
+              {t('addComparison')}
             </button>
           )}
         </div>
@@ -81,7 +85,7 @@ export default function App() {
 
       <div className={`panels${comparing ? ' comparing' : ''}`}>
         <MapPanel
-          title={comparing ? 'טווח א׳' : undefined}
+          title={comparing ? t('panelA') : undefined}
           range={activeA}
           onRangeChange={setRangeA}
           minDate={minDate}
@@ -90,10 +94,11 @@ export default function App() {
           heatmapMax={heatmapMaxA}
           showHeatmap={showHeatmap}
           showFatalities={showFatalities}
+          news={data.news}
         />
         {comparing && rangeB && (
           <MapPanel
-            title="טווח ב׳"
+            title={t('panelB')}
             range={rangeB}
             onRangeChange={(r) => setRangeB(r)}
             minDate={minDate}
@@ -102,6 +107,7 @@ export default function App() {
             heatmapMax={heatmapMaxB}
             showHeatmap={showHeatmap}
             showFatalities={showFatalities}
+            news={data.news}
           />
         )}
       </div>

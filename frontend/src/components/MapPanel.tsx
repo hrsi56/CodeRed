@@ -3,6 +3,7 @@ import { MapView } from './MapView';
 import { DateRangePicker } from './DateRangePicker';
 import { StatsPanel } from './StatsPanel';
 import type { PanelData } from '../data/usePanelData';
+import type { NewsEvent } from '../data/types';
 
 interface MapPanelProps {
   title?: string;
@@ -14,6 +15,7 @@ interface MapPanelProps {
   heatmapMax: number;
   showHeatmap: boolean;
   showFatalities: boolean;
+  news: NewsEvent[];
 }
 
 // One self-contained comparison unit (SPEC.md §6): its own range picker, map, and
@@ -28,6 +30,7 @@ export function MapPanel({
   heatmapMax,
   showHeatmap,
   showFatalities,
+  news,
 }: MapPanelProps) {
   return (
     <section className="panel">
@@ -43,7 +46,7 @@ export function MapPanel({
       </div>
       <div className="panel-side">
         {title && <h2 className="panel-title">{title}</h2>}
-        <DateRangePicker range={range} onRangeChange={onRangeChange} minDate={minDate} maxDate={maxDate} />
+        <DateRangePicker range={range} onRangeChange={onRangeChange} minDate={minDate} maxDate={maxDate} news={news} />
         <StatsPanel
           hourHistogram={derived.hourHistogram}
           totalAlerts={derived.totalAlerts}
