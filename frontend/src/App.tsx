@@ -9,7 +9,7 @@ import { DeltaStrip } from './components/DeltaStrip';
 import { FreshnessBanner } from './components/FreshnessBanner';
 import { Disclaimer } from './components/Disclaimer';
 import { LanguageToggle } from './components/LanguageToggle';
-import { useLanguage } from './i18n/LanguageContext';
+import { useLanguage } from './i18n/useLanguage';
 
 const DAY_MS = 86_400_000;
 

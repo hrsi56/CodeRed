@@ -1,4 +1,4 @@
-import { useLanguage } from '../i18n/LanguageContext';
+import { useLanguage } from '../i18n/useLanguage';
 
 // Legal/ethical disclaimer + attribution (SPEC.md §9, CLAUDE.md Hard Rule #7) — must
 // stay present in the UI, not just a one-time stage-6 polish item.

@@ -1,5 +1,5 @@
 import type { PanelData } from '../data/usePanelData';
-import { useLanguage } from '../i18n/LanguageContext';
+import { useLanguage } from '../i18n/useLanguage';
 import { localeOf, localizedName } from '../i18n/strings';
 
 function peakHour(hist: number[]): number | null {

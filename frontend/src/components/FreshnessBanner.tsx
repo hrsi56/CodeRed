@@ -1,5 +1,5 @@
 import type { Meta } from '../data/types';
-import { useLanguage } from '../i18n/LanguageContext';
+import { useLanguage } from '../i18n/useLanguage';
 import { localeOf } from '../i18n/strings';
 
 const formatDate = (isoDate: string, locale: string) =>

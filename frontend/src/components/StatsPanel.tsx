@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { CityWeight } from '../data/aggregate';
-import { useLanguage } from '../i18n/LanguageContext';
+import { useLanguage } from '../i18n/useLanguage';
 import { localeOf, localizedName } from '../i18n/strings';
 
 interface StatsPanelProps {
