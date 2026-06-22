@@ -21,6 +21,8 @@ export const strings = {
   addComparison: { he: 'הוסף השוואה', en: 'Add comparison' },
   panelA: { he: 'טווח א׳', en: 'Range A' },
   panelB: { he: 'טווח ב׳', en: 'Range B' },
+  carouselMap: { he: 'מפה', en: 'Map' },
+  carouselData: { he: 'נתונים', en: 'Data' },
 
   freshnessUnavailable: {
     he: 'אין עדיין נתונים זמינים — ייתכן שתהליך העדכון היומי עדיין לא רץ.',

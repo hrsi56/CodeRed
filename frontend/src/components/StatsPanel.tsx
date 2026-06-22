@@ -15,7 +15,7 @@ export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, dayCount }
   const { lang, t } = useLanguage();
   const numberFmt = useMemo(() => new Intl.NumberFormat(localeOf(lang)), [lang]);
   const topCities = useMemo(
-    () => [...cityWeights].sort((a, b) => b.weight - a.weight).slice(0, 10),
+    () => [...cityWeights].sort((a, b) => b.weight - a.weight).slice(0, 8),
     [cityWeights],
   );
   const distinctZones = useMemo(
@@ -28,52 +28,58 @@ export function StatsPanel({ hourHistogram, totalAlerts, cityWeights, dayCount }
 
   return (
     <div className="stats-panel">
-      <div className="stat-grid">
-        <Stat label={t('statAlertsInRange')} value={totalAlerts} numberFmt={numberFmt} />
-        <Stat label={t('statAvgPerDay')} text={formatPerDay(totalAlerts, dayCount, numberFmt)} />
-        <Stat label={t('statLocalitiesHit')} value={cityWeights.length} numberFmt={numberFmt} />
-        <Stat label={t('statZonesHit')} value={distinctZones} numberFmt={numberFmt} />
+      {/* Numbers + hour chart. Israel is narrow, so on a wide-enough data panel the
+          localities list sits beside this column rather than below it. */}
+      <div className="stats-main">
+        <div className="stat-grid">
+          <Stat label={t('statAlertsInRange')} value={totalAlerts} numberFmt={numberFmt} />
+          <Stat label={t('statAvgPerDay')} text={formatPerDay(totalAlerts, dayCount, numberFmt)} />
+          <Stat label={t('statLocalitiesHit')} value={cityWeights.length} numberFmt={numberFmt} />
+          <Stat label={t('statZonesHit')} value={distinctZones} numberFmt={numberFmt} />
+        </div>
+
+        <h3 className="stats-heading">{t('hourChartHeading')}</h3>
+        <div className="hour-chart">
+          <ResponsiveContainer width="100%" height={110}>
+            <BarChart data={hourData} margin={{ top: 4, right: 4, bottom: 0, left: -24 }}>
+              <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} tickFormatter={(h) => `${h}`} />
+              <YAxis tick={{ fontSize: 10 }} width={36} />
+              <Tooltip
+                formatter={(v) => [numberFmt.format(Number(v)), t('tooltipAlerts')]}
+                labelFormatter={(h) => `${t('tooltipHourPrefix')} ${h}:00`}
+                contentStyle={{ direction: lang === 'he' ? 'rtl' : 'ltr', fontSize: 12 }}
+              />
+              <Bar dataKey="count" radius={[2, 2, 0, 0]}>
+                {hourData.map((d) => (
+                  <Cell key={d.hour} fill={d.count === peakCount && peakCount > 0 ? '#bd0026' : '#f0843c'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
-      <h3 className="stats-heading">{t('hourChartHeading')}</h3>
-      <div className="hour-chart">
-        <ResponsiveContainer width="100%" height={140}>
-          <BarChart data={hourData} margin={{ top: 4, right: 4, bottom: 0, left: -24 }}>
-            <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} tickFormatter={(h) => `${h}`} />
-            <YAxis tick={{ fontSize: 10 }} width={36} />
-            <Tooltip
-              formatter={(v) => [numberFmt.format(Number(v)), t('tooltipAlerts')]}
-              labelFormatter={(h) => `${t('tooltipHourPrefix')} ${h}:00`}
-              contentStyle={{ direction: lang === 'he' ? 'rtl' : 'ltr', fontSize: 12 }}
-            />
-            <Bar dataKey="count" radius={[2, 2, 0, 0]}>
-              {hourData.map((d) => (
-                <Cell key={d.hour} fill={d.count === peakCount && peakCount > 0 ? '#bd0026' : '#f0843c'} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="stats-cities">
+        <h3 className="stats-heading stats-heading-first">{t('topCitiesHeading')}</h3>
+        {topCities.length === 0 ? (
+          <p className="stats-empty">{t('noAlertsInRange')}</p>
+        ) : (
+          <ol className="top-cities">
+            {topCities.map((c) => (
+              <li key={c.id}>
+                <span className="city-name">{localizedName(lang, c.he, c.en)}</span>
+                <span className="city-bar-wrap">
+                  <span
+                    className="city-bar"
+                    style={{ width: `${(c.weight / topCities[0].weight) * 100}%` }}
+                  />
+                </span>
+                <span className="city-count">{numberFmt.format(c.weight)}</span>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
-
-      <h3 className="stats-heading">{t('topCitiesHeading')}</h3>
-      {topCities.length === 0 ? (
-        <p className="stats-empty">{t('noAlertsInRange')}</p>
-      ) : (
-        <ol className="top-cities">
-          {topCities.map((c) => (
-            <li key={c.id}>
-              <span className="city-name">{localizedName(lang, c.he, c.en)}</span>
-              <span className="city-bar-wrap">
-                <span
-                  className="city-bar"
-                  style={{ width: `${(c.weight / topCities[0].weight) * 100}%` }}
-                />
-              </span>
-              <span className="city-count">{numberFmt.format(c.weight)}</span>
-            </li>
-          ))}
-        </ol>
-      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import { HeatLayer } from './HeatLayer';
 import { theme } from '../config/theme';
@@ -11,16 +11,64 @@ interface MapViewProps {
   heatmapMax: number;
 }
 
-// Some embeds briefly give the map container a 0x0 size right at mount (seen in this
-// project's own preview tooling). Leaflet recovers fine from that once told the real
-// size, but the canvas-drawing HeatLayer needs a nudge — this is that nudge.
-function MapResizeHandler() {
+type Bounds = [[number, number], [number, number]];
+
+// Frame to where the alerts are *concentrated* (the localities the heatmap actually
+// draws as warm), not to every locality with a single stray siren — this dataset has
+// near-nationwide sparse coverage, so a fit-to-all would always show the whole country.
+// We keep localities whose weight is at least this fraction of the range's peak; that
+// matches the visible "red": a northern-only spell frames the north, a Gaza-envelope
+// spell frames the envelope, alerts at both Metula and Eilat frame the whole length.
+const FRAME_WEIGHT_FRACTION = 0.1;
+
+function AutoView({ cityWeights }: { cityWeights: CityWeight[] }) {
   const map = useMap();
+  const boundsRef = useRef<Bounds | null>(null);
+
+  const apply = useCallback(() => {
+    map.invalidateSize();
+    const b = boundsRef.current;
+    if (!b) {
+      map.setView(ISRAEL_CENTER, 8, { animate: false });
+      return;
+    }
+    // maxZoom keeps a single dominant locality from zooming in absurdly far.
+    map.fitBounds(b, { padding: [30, 30], maxZoom: 11, animate: false });
+  }, [map]);
+
   useEffect(() => {
-    const observer = new ResizeObserver(() => map.invalidateSize());
+    const pts = cityWeights.filter((c) => c.weight > 0);
+    if (pts.length === 0) {
+      boundsRef.current = null;
+    } else {
+      const peak = pts.reduce((m, c) => Math.max(m, c.weight), 0);
+      const threshold = peak * FRAME_WEIGHT_FRACTION;
+      const strong = pts.filter((c) => c.weight >= threshold);
+      const framed = strong.length > 0 ? strong : pts;
+      let minLat = Infinity;
+      let maxLat = -Infinity;
+      let minLng = Infinity;
+      let maxLng = -Infinity;
+      for (const c of framed) {
+        if (c.lat < minLat) minLat = c.lat;
+        if (c.lat > maxLat) maxLat = c.lat;
+        if (c.lng < minLng) minLng = c.lng;
+        if (c.lng > maxLng) maxLng = c.lng;
+      }
+      boundsRef.current = [
+        [minLat, minLng],
+        [maxLat, maxLng],
+      ];
+    }
+    apply();
+  }, [cityWeights, apply]);
+
+  useEffect(() => {
+    const observer = new ResizeObserver(() => apply());
     observer.observe(map.getContainer());
     return () => observer.disconnect();
-  }, [map]);
+  }, [map, apply]);
+
   return null;
 }
 
@@ -40,7 +88,7 @@ export function MapView({ cityWeights, showHeatmap, heatmapMax }: MapViewProps) 
       maxBoundsViscosity={1}
       style={{ width: '100%', height: '100%' }}
     >
-      <MapResizeHandler />
+      <AutoView cityWeights={cityWeights} />
       <TileLayer
         url={theme.basemap.url}
         attribution={theme.basemap.attribution}

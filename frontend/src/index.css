@@ -6,6 +6,14 @@
   --border: #e3d8c4;
   --accent: #d7263d;
 
+  /* Side identity: range A is the warm/primary side, range B a darker, cooler side.
+     The tint + accent travel together across calendar, map edge and data panel so
+     "which range" is read from colour, not just screen position. */
+  --side-a-bg: #fbf8f0;
+  --side-a-accent: #d7263d;
+  --side-b-bg: #ebe1cf;
+  --side-b-accent: #3b5a8c;
+
   font: 16px/1.5 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
   color: var(--ink);
   background: var(--land);
@@ -15,38 +23,59 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
+  overflow: hidden;
 }
 
-#root {
-  min-height: 100svh;
-}
-
+/* ── App shell: one fixed window, never the page scrolls (desktop = no scroll at all,
+   phone = horizontal carousel inside the stage). ─────────────────────────────── */
 .app {
+  height: 100dvh;
   display: flex;
   flex-direction: column;
-  min-height: 100svh;
+  overflow: hidden;
+  background: var(--land);
 }
 
-.app-header {
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  background: #faf6ec;
-}
-
-.app-header-row {
+.app-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border);
+  background: #faf6ec;
+  flex: 0 0 auto;
   flex-wrap: wrap;
 }
 
-.app-header h1 {
+.app-bar h1 {
   margin: 0;
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.app-bar-controls {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.app-bar-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
 }
 
 .lang-toggle {
@@ -57,7 +86,7 @@ body {
 .lang-toggle button {
   font: inherit;
   font-size: 12px;
-  padding: 4px 8px;
+  padding: 3px 7px;
   border: 1px solid var(--border);
   background: #fff;
   border-radius: 6px;
@@ -71,34 +100,18 @@ body {
 }
 
 .freshness-banner {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--ink-soft);
   background: #fff8e8;
   border: 1px solid #ead9a8;
   border-radius: 6px;
-  padding: 5px 9px;
-}
-
-.controls {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-  font-size: 13px;
-}
-
-.controls label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
+  padding: 4px 8px;
 }
 
 .ctrl-btn {
   font: inherit;
   font-size: 13px;
-  padding: 5px 12px;
+  padding: 4px 11px;
   border: 1px solid var(--accent);
   background: #fff;
   color: var(--accent);
@@ -111,69 +124,251 @@ body {
   color: #fff;
 }
 
-/* Panels: one fills the row; comparison splits into two. */
-.panels {
-  flex: 1;
+.timeline-zone {
+  flex: 0 0 auto;
+  padding: 6px 14px 4px;
+  border-bottom: 1px solid var(--border);
+  background: #faf6ec;
+}
+
+/* ── Calendars: pinned just under the timeline, close to it. One spread of months in
+   single view; two side-by-side cards (B darker) in comparison. ───────────────── */
+.calendars {
+  flex: 0 0 auto;
   display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.delta-zone {
+  flex: 0 0 auto;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border);
+  background: #faf6ec;
+}
+
+/* ── Stage: the map + data area, fills the remaining height. ───────────────────── */
+.stage {
+  flex: 1 1 auto;
   min-height: 0;
-}
-
-.panel {
-  flex: 1;
   display: flex;
-  min-width: 0;
-  border-inline-start: 1px solid var(--border);
 }
 
-.panels.comparing .panel + .panel {
-  border-inline-start: 2px solid var(--border);
+.stage-desktop {
+  flex-direction: row;
+  justify-content: center;
 }
 
-.panel-map {
-  flex: 1;
+/* Israel is long and narrow, so a full-width map is mostly empty sea/neighbours. Cap
+   the map and hand the freed width to the data panel (localities list beside the
+   numbers). The stage centres, so the leftover shows as side margins. */
+.stage-desktop:not(.comparing) .stats-card {
+  flex: 0 0 470px;
+}
+
+.stage-desktop:not(.comparing) .map-card {
+  flex: 0 1 500px;
+  max-width: 500px;
+}
+
+.stage-desktop.comparing .stats-card {
+  flex: 0 0 250px;
+}
+
+.stage-desktop.comparing .map-card {
+  flex: 0 1 440px;
+  max-width: 440px;
+}
+
+.map-card {
   position: relative;
+  flex: 1 1 0;
   min-width: 0;
+  border-top: 3px solid var(--side-a-accent);
 }
 
-/* Absolute-fill the (position:relative) panel-map so the map gets a real height
-   even when the parent's height comes from min-height (the narrow column layout),
-   where a plain height:100% would collapse to 0. */
-.panel-map .leaflet-container {
+.map-card.side-b {
+  border-top-color: var(--side-b-accent);
+}
+
+/* Absolute-fill so the canvas gets a real height even when the parent height comes
+   from flex (a plain height:100% can collapse to 0 here). */
+.map-card .leaflet-container {
   position: absolute;
   inset: 0;
 }
 
-.panel-badge {
-  position: absolute;
-  top: 8px;
-  inset-inline-start: 50px;
-  z-index: 500;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 2px 10px;
-  font-weight: 700;
-  font-size: 13px;
+.stats-card {
+  flex: 0 0 264px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  background: var(--side-a-bg);
+  border-top: 3px solid var(--side-a-accent);
 }
 
-.panel-side {
-  width: 320px;
-  flex-shrink: 0;
-  overflow-y: auto;
-  padding: 14px;
+.stats-card.side-b {
+  background: var(--side-b-bg);
+  border-top-color: var(--side-b-accent);
+}
+
+.stage-desktop .stats-card {
   border-inline-start: 1px solid var(--border);
+}
+
+/* ── Mobile carousel: swipe between the map(s) and the data. ───────────────────── */
+.stage-mobile {
+  flex-direction: column;
+}
+
+.stage-carousel {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.carousel-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 100%;
+  scroll-snap-align: start;
+  display: flex;
+}
+
+.carousel-slide.slide-stats {
+  overflow-y: auto;
+}
+
+.carousel-slide.comparing > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.slide-stats .stats-card {
+  flex: 1 1 0;
+}
+
+.carousel-pager {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 7px;
+  border-top: 1px solid var(--border);
   background: #faf6ec;
 }
 
-.panel-title {
-  margin: 0 0 8px;
-  font-size: 15px;
-  font-weight: 700;
+.pager-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 999px;
+  color: var(--ink-soft);
+  cursor: pointer;
 }
 
-/* Timeline */
+.pager-pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.pager-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
+}
+
+.pager-pill.active .pager-dot {
+  opacity: 1;
+}
+
+/* ── Footer: thin, the disclaimer opens as an overlay so the shell never grows. ── */
+.app-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  padding: 4px 14px;
+  border-top: 1px solid var(--border);
+  background: #faf6ec;
+}
+
+.disclaimer-btn {
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.disclaimer-btn:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.disclaimer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(40, 30, 20, 0.4);
+  padding: 20px;
+}
+
+.disclaimer-card {
+  max-width: 560px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  padding: 16px 18px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.disclaimer-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  color: var(--ink);
+}
+
+.disclaimer-card p {
+  margin: 8px 0;
+}
+
+.disclaimer-close {
+  border: none;
+  background: none;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+
+/* ── Timeline ─────────────────────────────────────────────────────────────────── */
 .timeline {
-  margin-top: 10px;
   position: relative;
 }
 
@@ -181,11 +376,11 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 .timeline-month-label {
-  font-size: 14px;
+  font-size: 13px;
   min-width: 110px;
   text-align: center;
 }
@@ -193,7 +388,7 @@ body {
 .timeline-nav {
   font: inherit;
   font-size: 12px;
-  padding: 4px 10px;
+  padding: 3px 9px;
   border: 1px solid var(--border);
   background: #f7f2e7;
   border-radius: 6px;
@@ -210,7 +405,7 @@ body {
   margin-inline-start: auto;
   font: inherit;
   font-size: 12px;
-  padding: 4px 10px;
+  padding: 3px 9px;
   border: 1px solid var(--border);
   background: #fff;
   border-radius: 6px;
@@ -229,7 +424,7 @@ body {
    transform: translateX(-50%) centers correctly in both directions. */
 .timeline-zoom-track {
   position: relative;
-  height: 84px;
+  height: 74px;
   background: #efe7d6;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -255,7 +450,7 @@ body {
 .timeline-week-grid {
   position: absolute;
   top: 0;
-  bottom: 16px;
+  bottom: 15px;
   width: 0;
   border-left: 1px dashed #cdbfa6;
   pointer-events: none;
@@ -263,7 +458,7 @@ body {
 
 .timeline-week-grid span {
   position: absolute;
-  bottom: -16px;
+  bottom: -15px;
   left: 0;
   transform: translateX(-50%);
   font-size: 10px;
@@ -273,7 +468,7 @@ body {
 
 .timeline-dot {
   position: absolute;
-  top: 48px;
+  top: 42px;
   width: 9px;
   height: 9px;
   padding: 0;
@@ -294,7 +489,7 @@ body {
 
 .timeline-key-event {
   position: absolute;
-  top: 4px;
+  top: 3px;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
@@ -326,7 +521,7 @@ body {
 .timeline-key-event::after {
   content: '';
   width: 2px;
-  height: 26px;
+  height: 22px;
   background: #7a0a0a;
   opacity: 0.5;
 }
@@ -337,15 +532,16 @@ body {
 }
 
 .timeline-popover {
-  position: relative;
+  position: absolute;
   z-index: 1200;
+  inset-inline-start: 0;
   max-width: 420px;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   padding: 10px 12px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .timeline-raw-label {
@@ -358,8 +554,8 @@ body {
 
 .timeline-minimap {
   position: relative;
-  height: 30px;
-  margin-top: 8px;
+  height: 26px;
+  margin-top: 7px;
   background: #efe7d6;
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -413,11 +609,75 @@ body {
   pointer-events: none;
 }
 
-/* Calendar event markers + legend */
+/* ── Calendar (react-day-picker), shrunk to fit and tinted per side. The sizing vars
+   are redefined on .rdp-root itself (that's where the library sets them, so an
+   ancestor declaration would lose to inheritance). ────────────────────────────── */
 .range-picker {
   display: flex;
   flex-direction: column;
   align-items: center;
+  font-size: 12px;
+  background: var(--side-a-bg);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--side-a-accent);
+  border-radius: 8px;
+  padding: 6px 10px 8px;
+}
+
+.range-picker .rdp-root {
+  --rdp-day-width: 30px;
+  --rdp-day-height: 28px;
+  --rdp-day_button-width: 28px;
+  --rdp-day_button-height: 26px;
+  --rdp-day_button-border-radius: 6px;
+  --rdp-months-gap: 14px;
+  --rdp-nav_button-width: 26px;
+  --rdp-nav_button-height: 22px;
+  --rdp-accent-color: var(--side-a-accent);
+  --rdp-accent-background-color: #fdecec;
+  margin: 0;
+}
+
+.range-picker.side-b {
+  background: var(--side-b-bg);
+  border-top-color: var(--side-b-accent);
+}
+
+.range-picker.side-b .rdp-root {
+  --rdp-accent-color: var(--side-b-accent);
+  --rdp-accent-background-color: #e6ebf3;
+}
+
+.range-picker .rdp-month_caption {
+  font-size: 13px;
+}
+
+.range-picker .rdp-months {
+  flex-wrap: nowrap;
+}
+
+.range-picker-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: stretch;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.range-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.side-dot-a {
+  background: var(--side-a-accent);
+}
+
+.side-dot-b {
+  background: var(--side-b-accent);
 }
 
 .rdp-has-news:not(.rdp-selected) .rdp-day_button,
@@ -428,7 +688,7 @@ body {
 .rdp-has-news .rdp-day_button::after {
   content: '';
   position: absolute;
-  bottom: 3px;
+  bottom: 2px;
   left: 50%;
   transform: translateX(-50%);
   width: 4px;
@@ -444,8 +704,8 @@ body {
 
 .calendar-legend {
   display: flex;
-  gap: 14px;
-  margin-top: 6px;
+  gap: 12px;
+  margin-top: 5px;
   font-size: 11px;
   color: var(--ink-soft);
 }
@@ -533,12 +793,11 @@ body {
   border-color: var(--accent);
 }
 
-/* Delta strip */
+/* ── Delta strip ──────────────────────────────────────────────────────────────── */
 .delta-strip {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  margin-top: 10px;
 }
 
 .delta {
@@ -547,7 +806,7 @@ body {
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 6px 10px;
+  padding: 5px 10px;
 }
 
 .delta-label {
@@ -556,7 +815,7 @@ body {
 }
 
 .delta-value {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -566,23 +825,41 @@ body {
   font-weight: 600;
 }
 
+/* ── Stats panel: numbers+chart in one column, localities beside it when the panel
+   is wide enough (single desktop), stacked when narrow (comparison / phone). ───── */
 .stats-panel {
-  margin: 16px 0;
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: flex-start;
+}
+
+.stats-main {
+  flex: 1 1 215px;
+  min-width: 0;
+}
+
+.stats-cities {
+  flex: 1 1 195px;
+  min-width: 0;
+}
+
+.stats-cities .stats-heading-first {
+  margin-top: 0;
 }
 
 .stat-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 7px;
 }
 
 .stat {
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 6px 8px;
   text-align: center;
 }
 
@@ -592,7 +869,7 @@ body {
 }
 
 .stat-value {
-  font-size: 22px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--ink);
   line-height: 1.1;
@@ -609,9 +886,9 @@ body {
 }
 
 .stats-heading {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  margin: 16px 0 6px;
+  margin: 10px 0 5px;
   color: var(--ink);
 }
 
@@ -635,7 +912,7 @@ body {
 
 .top-cities li {
   display: grid;
-  grid-template-columns: 90px 1fr 34px;
+  grid-template-columns: 84px 1fr 34px;
   align-items: center;
   gap: 6px;
   font-size: 12px;
@@ -666,55 +943,94 @@ body {
   color: var(--ink-soft);
 }
 
-.disclaimer {
-  font-size: 12px;
-  color: var(--ink-soft);
-  border-top: 1px solid var(--border);
-  padding: 12px 16px;
-  background: #faf6ec;
-}
-
-.disclaimer summary {
-  cursor: pointer;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-
-.disclaimer p {
-  margin: 6px 0;
-}
-
 .status-screen {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100svh;
+  height: 100dvh;
   font-size: 18px;
   color: var(--ink-soft);
   text-align: center;
   padding: 24px;
 }
 
-/* Stack each panel (map over its side column) and, in comparison, the two panels. */
-@media (max-width: 900px) {
-  .panels,
-  .panels.comparing {
-    flex-direction: column;
+/* ── Phone tuning: compact chrome + smaller calendars (two fit side by side when
+   comparing) so the map carousel keeps a usable height. ───────────────────────── */
+@media (max-width: 820px) {
+  .app-bar {
+    padding: 5px 10px;
+    gap: 6px 10px;
   }
 
-  .panel {
-    flex-direction: column;
-    border-inline-start: none;
-    border-top: 1px solid var(--border);
+  .app-bar h1 {
+    font-size: 14px;
   }
 
-  .panel-map {
-    min-height: 55vh;
+  .freshness-banner {
+    font-size: 11px;
+    padding: 3px 6px;
   }
 
-  .panel-side {
-    width: 100%;
-    border-inline-start: none;
-    border-top: 1px solid var(--border);
+  .app-bar-controls {
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .timeline-zone {
+    padding: 5px 10px 3px;
+  }
+
+  /* Comparison deltas are reachable by swiping to the two data panels — drop the
+     always-on strip on phones so the maps aren't squeezed. */
+  .delta-zone {
+    display: none;
+  }
+
+  .calendars {
+    gap: 8px;
+    padding: 6px 8px;
+  }
+
+  .range-picker {
+    padding: 5px 7px 6px;
+  }
+
+  .range-picker .rdp-root {
+    --rdp-day-width: 28px;
+    --rdp-day-height: 26px;
+    --rdp-day_button-width: 26px;
+    --rdp-day_button-height: 24px;
+  }
+
+  .calendars.comparing .range-picker {
+    font-size: 11px;
+    padding: 4px 5px 5px;
+  }
+
+  .calendars.comparing .range-picker .rdp-root {
+    --rdp-day-width: 22px;
+    --rdp-day-height: 22px;
+    --rdp-day_button-width: 20px;
+    --rdp-day_button-height: 20px;
+    --rdp-months-gap: 8px;
+  }
+
+  .calendars.comparing .range-picker .rdp-month_caption {
+    font-size: 11px;
+  }
+
+  /* Day numbers must shrink with the 22px cells, otherwise selected (bold) days
+     overflow and overlap. */
+  .calendars.comparing .range-picker .rdp-day_button,
+  .calendars.comparing .range-picker .rdp-weekday {
+    font-size: 10px;
+  }
+
+  .calendars.comparing .range-picker-head {
+    font-size: 11px;
+  }
+
+  .calendars.comparing .calendar-legend {
+    display: none;
   }
 }
