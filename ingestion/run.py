@@ -1,6 +1,6 @@
 import os
 
-from . import db, export, geocode, ingest_alerts, ingest_fatalities, ingest_news
+from . import db, export, geocode, ingest_alerts, ingest_fatalities, ingest_news, ingest_news_wikipedia
 
 
 def main() -> None:
@@ -22,7 +22,14 @@ def main() -> None:
         try:
             ingest_news.load_news(conn, full=False)
         except Exception as exc:  # noqa: BLE001
-            print(f"[run] news ingestion failed ({exc}); keeping existing news")
+            print(f"[run] GDELT news ingestion failed ({exc}); keeping existing news")
+
+        # Fallback track (SPEC.md §3.4): fill timeline days GDELT left empty from
+        # Wikipedia's curated Current-events pages. Also best-effort.
+        try:
+            ingest_news_wikipedia.load_news_wikipedia(conn, full=False)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[run] Wikipedia news ingestion failed ({exc}); keeping existing news")
 
         export.export_all(conn)
         conn.execute("VACUUM")
