@@ -13,13 +13,15 @@ interface MapViewProps {
 
 type Bounds = [[number, number], [number, number]];
 
-// Frame to where the alerts are *concentrated* (the localities the heatmap actually
-// draws as warm), not to every locality with a single stray siren — this dataset has
-// near-nationwide sparse coverage, so a fit-to-all would always show the whole country.
-// We keep localities whose weight is at least this fraction of the range's peak; that
-// matches the visible "red": a northern-only spell frames the north, a Gaza-envelope
-// spell frames the envelope, alerts at both Metula and Eilat frame the whole length.
-const FRAME_WEIGHT_FRACTION = 0.1;
+// Frame to *every* locality the heatmap actually paints red. The heat layer draws
+// all weight>0 points (minOpacity 0.25 + gamma 0.35 make even low-weight localities
+// clearly visible), so the auto-zoom must include them all — otherwise a faint-but-red
+// area at the edge of the range gets clipped out of view. Earlier we framed only to a
+// fraction of the peak weight, which cut off exactly those visible-but-weaker areas.
+//
+// The heat glow also extends beyond each centroid (radius 16 + blur 10 ≈ 26px), so we
+// pad the fitted bounds enough to keep the glow of edge localities on-screen.
+const FRAME_PADDING_PX = 48;
 
 function AutoView({ cityWeights }: { cityWeights: CityWeight[] }) {
   const map = useMap();
@@ -33,18 +35,14 @@ function AutoView({ cityWeights }: { cityWeights: CityWeight[] }) {
       return;
     }
     // maxZoom keeps a single dominant locality from zooming in absurdly far.
-    map.fitBounds(b, { padding: [30, 30], maxZoom: 11, animate: false });
+    map.fitBounds(b, { padding: [FRAME_PADDING_PX, FRAME_PADDING_PX], maxZoom: 11, animate: false });
   }, [map]);
 
   useEffect(() => {
-    const pts = cityWeights.filter((c) => c.weight > 0);
-    if (pts.length === 0) {
+    const framed = cityWeights.filter((c) => c.weight > 0);
+    if (framed.length === 0) {
       boundsRef.current = null;
     } else {
-      const peak = pts.reduce((m, c) => Math.max(m, c.weight), 0);
-      const threshold = peak * FRAME_WEIGHT_FRACTION;
-      const strong = pts.filter((c) => c.weight >= threshold);
-      const framed = strong.length > 0 ? strong : pts;
       let minLat = Infinity;
       let maxLat = -Infinity;
       let minLng = Infinity;
