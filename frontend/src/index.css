@@ -31,13 +31,12 @@ body,
 
 body {
   margin: 0;
-  overflow: hidden;
 }
 
 /* ── App shell: one fixed window, never the page scrolls (desktop = no scroll at all,
    phone = horizontal carousel inside the stage). ─────────────────────────────── */
 .app {
-  height: 100dvh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -148,7 +147,7 @@ body {
 /* ── Stage: the map + data area, fills the remaining height. ───────────────────── */
 .stage {
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: 500px;
   display: flex;
 }
 
