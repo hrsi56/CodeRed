@@ -16,14 +16,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  # Ingest -> commit data -> build -> upload the Pages artifact.
+  # Kept separate from `deploy` so a transient Pages failure can be retried with
+  # "Re-run failed jobs" without re-running ingestion or pushing again.
+  update-and-build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Check out the branch tip, not the SHA the run was created for. A re-run
+          # replays the original SHA by default, so if an earlier attempt already
+          # pushed a data commit, the new commit would be rejected as non-fast-forward.
+          ref: ${{ github.ref_name }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -47,6 +52,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/atlas.sqlite frontend/public/data/*.json
           git diff --cached --quiet || git commit -m "chore(data): daily ingestion update"
+          # Pick up anything pushed to the branch while ingestion ran (e.g. a code
+          # commit). Data files are only written by this job, so this rebases cleanly.
+          git pull --rebase --autostash origin ${{ github.ref_name }}
           git push origin HEAD:${{ github.ref_name }}
 
       - name: Set up Node
@@ -72,6 +80,26 @@ jobs:
         with:
           path: frontend/dist
 
+  deploy:
+    needs: update-and-build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy-retry.outputs.page_url }}
+    steps:
+      # deploy-pages sometimes can't see an artifact that was uploaded seconds earlier
+      # ("No artifacts named github-pages were found"). Retry once after a pause
+      # instead of failing the whole daily run.
       - name: Deploy to GitHub Pages
-        id: deployment
+        id: deploy
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Wait before retrying deploy
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 60
+
+      - name: Deploy to GitHub Pages (retry)
+        id: deploy-retry
+        if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v4

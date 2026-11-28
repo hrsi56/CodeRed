@@ -102,6 +102,17 @@ in `run.py` — see "No fatalities layer" above.
 "yesterday" in Asia/Jerusalem, ingests, commits the refreshed `data/atlas.sqlite` +
 `frontend/public/data/*.json` back to `main`, builds, and deploys to Pages.
 
+It has two jobs: `update-and-build` (ingest → commit → build → upload the Pages artifact)
+and `deploy` (publish that artifact; retries once automatically, since Pages occasionally
+reports "No artifacts named github-pages were found" right after an upload).
+
+**If a run fails:**
+- Failed in `deploy` → use **Re-run failed jobs**. Only the deploy is retried; ingestion
+  and the data commit are not repeated.
+- Failed in `update-and-build` → start a **new** run (`workflow_dispatch`) rather than
+  re-running the old one: a re-run uses the workflow file as it was when that run was
+  created.
+
 **Required GitHub repo secrets:** none — alert and news ingestion are both keyless.
 `ACLED_EMAIL` / `ACLED_PASSWORD` (Settings → Secrets and variables → Actions) are still
 wired into the workflow env for an easy fatality-ingestion re-enable, but the build and
